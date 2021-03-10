@@ -7,7 +7,7 @@ There are two key requirements for allowing robust updates of a system:
 
 Additional, no unauthorized entity should be able to update your device. There must be a secure channel to transfer the update and the update needs to be signed which allows to verify its author.
 
-## Requirements
+## Requirements for distribution/RPMs
 
 ### System accounts and file ownership
 
@@ -22,3 +22,7 @@ by systemd-tmpfiles (tmpfiles.d.5) during the next reboot, they can be
 owned by a different system user than root.
 
 Checks: `find . ! -user root` shouldn't find anything
+
+## TODO
+
+* Verify that the format is really secure, how does the signing works?
