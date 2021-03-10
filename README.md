@@ -1,5 +1,12 @@
 # TIU - Transactional Image Update
 
+There are two key requirements for allowing robust updates of a system:
+
+1. Redundancy: You must not update the system you are currently running on. Otherwise a failure during updating will brick the only system you can run your update from.
+2. Atomicity: Writing the update to a currently inactive device is a critical operation. A failure occurring during this installation must not brick the device. The operation that switches the boot device must be atomic itself and only happen as the update was written error free.
+
+Additional, no unauthorized entity should be able to update your device. There must be a secure channel to transfer the update and the update needs to be signed which allows to verify its author.
+
 ## Requirements
 
 ### System accounts and file ownership
