@@ -50,3 +50,5 @@ Checks: `find . ! -user root` shouldn't find anything
 - [ ] Build tiuidx archive (swuashfs image with manifest and caidx file, store available via http/https)
 - [ ] SELinux (installs in /etc and /var)
 - [ ] update-alternatives (creates data in /var and symlinks in /etc)
+- [ ] Kernel update incl. rebuilding initrd
+- [ ] Bootloader update

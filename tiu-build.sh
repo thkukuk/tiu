@@ -15,9 +15,17 @@ tar xf ../openSUSE-MicroOS.x86_64-ContainerHost-tbz.tar.xz
 
 . etc/os-release
 
-# We don't need /var and /run, we cannot use them
-rm -rf var
-rm -rf run
+# cleanup all mount point
+rm -rfv home/*
+rm -rfv root/*
+rm -rfv opt/*
+rm -rfv srv/*
+rm -rfv boot/grub2/*-pc/*
+rm -rfv boot/grub2/*-efi/*
+rm -rfv boot/writeable/*
+rm -rfv usr/local/*
+rm -rfv var/*
+rm -rfv run/*
 
 NON_ROOT_FILES=$(find . ! -user root)
 
@@ -32,8 +40,9 @@ fi
 
 popd > /dev/null || exit
 
-DIGEST=$(casync make openSUSE-MicroOS-${VERSION_ID}.catar workdir)
-DIGEST2=$(casync make --store openSUSE-MicroOS-${VERSION_ID}.castr openSUSE-MicroOS-${VERSION_ID}.caidx  workdir/)
+CASYNC_ARGS="--exclude-submounts=yes --compression=zstd --with=best"
+DIGEST=$(casync make ${CASYNC_ARGS} openSUSE-MicroOS-${VERSION_ID}.catar workdir)
+DIGEST2=$(casync make ${CASYNC_ARGS} --store openSUSE-MicroOS-${VERSION_ID}.castr openSUSE-MicroOS-${VERSION_ID}.caidx  workdir/)
 
 if [ "${DIGEST}" != "${DIGEST2}" ]; then
 	echo "ERROR: data corruption!"
