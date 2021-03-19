@@ -18,8 +18,22 @@ Additional, no unauthorized entity should be able to update your device. There m
     * USB Sticks and container will have the full image in catar format, so we can update from every released version to the current one.
     * OTA: always download caidx file (inside tiuidx archive), fetch only required blocks 
 * Image needs to be signed
+* Must work with a plain http/https server, no server side services
 
 ## Requirements for distribution/RPMs
+
+### RPM %pre/%post install scripts
+
+The %pre/%post install scripts will only be executed when building the master image. Not when the image get's deployed or updated. So update code will never be executed. Changes to /etc, /var or anything else outside /usr and /boot will be deleted or overwritten.
+
+### RPM filelist
+
+RPMs should only contain files in `/usr` and for the moment in `/boot`. Files outside this two directories are not updateable and will always stay at the version of the image with which the System was installed first. %ghost entries for `/etc`, `/var`, `/run` and similar directories don't make any sense, as RPM is never executed to remove such packages with an update and the files will stay.
+
+Distribution specific configuration files have to stay in `/usr`, e.g. `/usr/etc`, `/usr/share/<package>` or similar locations. `/etc` is only for host specific configuration files and admin made changes. See `systemd`, `dbus-1` or `libeconf` as examples how services should merge the configuration snippets during start.
+
+All files in `/etc` have to be generated or adjusted during first image installation by the `image installer` or during boot by systemd services, either unit files or `sysusers.d` and `tmpfiles.d` configuration files. 
+`tmpfiles.d` is also to be used to populate `/var` and `/run`.
 
 ### System accounts and file ownership
 
