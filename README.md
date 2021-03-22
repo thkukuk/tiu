@@ -1,5 +1,7 @@
 # TIU - Transactional Image Update
 
+This project aims to provide a robust update infrastructure for [opensuse MicroOS](https://microos.opensuse.org) based on btrfs and images and not packages (RPMs).
+
 There are two key requirements for allowing robust updates of a system:
 
 1. Redundancy: You must not update the system you are currently running on. Otherwise a failure during updating will brick the only system you can run your update from.
