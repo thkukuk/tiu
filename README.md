@@ -73,12 +73,12 @@ service to distribute the updates, a plain https server is enough. But there
 are some bugs preventing the usage without workarounds:
 
 * [Implicit seed of pre-existing output breaks with 'Stale file handle' error when reflinking #240](https://github.com/systemd/casync/issues/240)
-* [Extracting in root of mounted btrfs filesystem fails with "Failed to run synchronizer: File exists" #248](https://github.com/systemd/casync/issues/248) - This one can be workarounded by achive a btrfs subvolume already.
+* [Extracting in root of mounted btrfs filesystem fails with "Failed to run synchronizer: File exists" #248](https://github.com/systemd/casync/issues/248) - This one can be workarounded by package the tree as btrfs subvolume already.
 
 
 ## TODO
 
-- [ ] Build image as tar archive from MicroOS RPMs in OBS
+- [x] Build image as tar archive from MicroOS RPMs in OBS
 - [ ] Create manifest which defines:
   - [ ] ID of OS which is updateable (/etc/os-release)
   - [ ] Supported architecture
@@ -91,5 +91,5 @@ are some bugs preventing the usage without workarounds:
 - [ ] Build tiuidx archive (swuashfs image with manifest and caidx file, store available via http/https)
 - [ ] SELinux (installs in /etc and /var)
 - [ ] update-alternatives (creates data in /var and symlinks in /etc)
-- [ ] Kernel update incl. rebuilding initrd
-- [ ] Bootloader update
+- [x] Kernel update incl. rebuilding initrd
+- [x] Bootloader update
