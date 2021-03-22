@@ -16,9 +16,25 @@ Additional, no unauthorized entity should be able to update your device. There m
   * With all updates (or better the full installation) in one image, you can update from every version to the current one. But how to update efficient without transferring too much data?
   * SOLUTION: use casync.
     * USB Sticks and container will have the full image in catar format, so we can update from every released version to the current one.
-    * OTA: always download caidx file (inside tiuidx archive), fetch only required blocks 
+    * OTA: always download caidx file (inside tiuidx archive), fetch only required blocks
 * Image needs to be signed
 * Must work with a plain http/https server, no server side services
+
+## Filesystem Layout
+
+`systemd` requires `/etc` writeable from the very beginning. This leaves the
+following options:
+* `/etc` is part of the read-only root filesystem and made writeable via overlayfs
+  * plus: works like today with transactional-update
+  * minus: does not allow IMA/EVM
+* `/etc` is an own, writeable subvolume
+  * plus: root filesystem is still read-only
+  * minus: I was not able to mount `/etc` before systemd needs it writeable.
+* We follow usrMove, which means we have a read-write root filesystem and the real data is only part of `/boot` and `/usr`.
+  * plus: root filesystem is read-write and allows easier changes like creating additional directories
+  * minus:
+    * root filesysem is read-write and allows changes
+    * rollback of two independent volumes is not possible
 
 ## Requirements for distribution/RPMs
 
@@ -32,7 +48,7 @@ RPMs should only contain files in `/usr` and for the moment in `/boot`. Files ou
 
 Distribution specific configuration files have to stay in `/usr`, e.g. `/usr/etc`, `/usr/share/<package>` or similar locations. `/etc` is only for host specific configuration files and admin made changes. See `systemd`, `dbus-1` or `libeconf` as examples how services should merge the configuration snippets during start.
 
-All files in `/etc` have to be generated or adjusted during first image installation by the `image installer` or during boot by systemd services, either unit files or `sysusers.d` and `tmpfiles.d` configuration files. 
+All files in `/etc` have to be generated or adjusted during first image installation by the `image installer` or during boot by systemd services, either unit files or `sysusers.d` and `tmpfiles.d` configuration files.
 `tmpfiles.d` is also to be used to populate `/var` and `/run`.
 
 ### System accounts and file ownership
@@ -48,6 +64,17 @@ by systemd-tmpfiles (tmpfiles.d.5) during the next reboot, they can be
 owned by a different system user than root.
 
 Checks: `find . ! -user root` shouldn't find anything
+
+## casync
+
+[casync](https://github.com/systemd/casync) seems to be the best tool to
+syncronise a local system with a "remote" archive. It does not need a special
+service to distribute the updates, a plain https server is enough. But there
+are some bugs preventing the usage without workarounds:
+
+* [Implicit seed of pre-existing output breaks with 'Stale file handle' error when reflinking #240](https://github.com/systemd/casync/issues/240)
+* [Extracting in root of mounted btrfs filesystem fails with "Failed to run synchronizer: File exists" #248](https://github.com/systemd/casync/issues/248) - This one can be workarounded by achive a btrfs subvolume already.
+
 
 ## TODO
 
