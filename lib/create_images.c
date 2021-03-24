@@ -434,13 +434,22 @@ create_images (const gchar *input, GError **gerror)
   gchar *manifest_file = g_strjoin("/", tmpdir, "manifest.tiu", NULL);
   gchar *output_tiutar = g_strjoin(".", pvers, "tiutar", NULL);
 
+  econf_setStringValue(manifest, "update", "FORMAT", "catar");
+  econf_setStringValue(manifest, "update", "ARCHIVE", pvers_tar);
+  econf_writeFile(manifest, tmpdir, "manifest.tiu");
+
   if (!mksquashfs (manifest_file, pvers_tar, NULL, output_tiutar, gerror))
     {
       cleanup (tmpdir);
       return FALSE;
     }
 
-  gchar *output_tiuidx = g_strjoin(".", pvers, "tiuidx", NULL);
+  gchar *output_tiuidx = g_strjoin(".", pvers, "caidx", NULL);
+
+  econf_setStringValue(manifest, "update", "FORMAT", "caidx");
+  econf_setStringValue(manifest, "update", "ARCHIVE", pvers_idx);
+  econf_writeFile(manifest, tmpdir, "manifest.tiu");
+
   if (!mksquashfs (manifest_file, pvers_idx, NULL, output_tiuidx, gerror))
     {
       cleanup (tmpdir);
