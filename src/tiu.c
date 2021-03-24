@@ -21,11 +21,11 @@ init_group_options (void)
 int
 main(int argc, char **argv)
 {
-  gboolean help = FALSE, debug = FALSE, version = FALSE;
+  gboolean help = FALSE, version = FALSE;
   g_autoptr(GOptionContext) context = NULL;
   GError *error = NULL;
   GOptionEntry options[] = {
-    {"debug", 'd', 0, G_OPTION_ARG_NONE, &debug, "enable debug output", NULL},
+    {"debug", 'd', 0, G_OPTION_ARG_NONE, &debug_flag, "enable debug output", NULL},
     {"version", '\0', 0, G_OPTION_ARG_NONE, &version, "display version", NULL},
     {"help", 'h', 0, G_OPTION_ARG_NONE, &help, NULL, NULL},
     {0}
@@ -50,7 +50,7 @@ main(int argc, char **argv)
       exit (1);
     }
 
-  if (debug)
+  if (debug_flag)
     {
       /* Not yet implemented */
     }

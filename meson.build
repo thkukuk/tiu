@@ -43,6 +43,8 @@ libtiu_src = files(
   'lib/casync_make.c',
   'lib/create_images.c',
   'lib/rm_rf.c',
+  'lib/variables.c',
+  'lib/verity_hash.c',
   'lib/workdir.c',
 )
 
@@ -53,7 +55,9 @@ tiu_src = files(
 mapfile = 'lib/libtiu.map'
 version_flag = '-Wl,--version-script,@0@/@1@'.format(meson.current_source_dir(), mapfile)
 
+openssl_dep = dependency('libcrypto')
 gio_dep = dependency('gio-2.0')
+gio_unix_dep = dependency('gio-unix-2.0')
 libeconf_dep = dependency('libeconf')
 
 lib = library(
@@ -65,7 +69,7 @@ lib = library(
   link_depends : mapfile,
   version : meson.project_version(),
   soversion : '0',
-  dependencies : [gio_dep, libeconf_dep],
+  dependencies : [gio_dep, gio_unix_dep, libeconf_dep, openssl_dep],
 )
 
 install_headers('include/tiu.h')
