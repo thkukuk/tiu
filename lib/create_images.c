@@ -447,7 +447,7 @@ create_images (const gchar *input, GError **gerror)
 
   gchar *output_tiuidx = g_strjoin(".", pvers, "caidx", NULL);
 
-  econf_setStringValue(manifest, "update", "FORMAT", "caidx");
+  econf_setStringValue(manifest, "update", "FORMAT", "tiuidx");
   econf_setStringValue(manifest, "update", "ARCHIVE", pvers_idx);
   econf_writeFile(manifest, tmpdir, "manifest.tiu");
 
@@ -457,7 +457,9 @@ create_images (const gchar *input, GError **gerror)
       return FALSE;
     }
 
+  /* XXX error handling */
   calc_verity(output_tiutar, gerror);
+  calc_verity(output_tiuidx, gerror);
 
   if (!workdir_destroy (tmpdir, NULL))
     return FALSE;
