@@ -14,7 +14,7 @@ G_DEFINE_AUTOPTR_CLEANUP_FUNC(tiu_manifest, free_manifest)
 
 /* External */
 extern gboolean debug_flag;
-extern gboolean apply_tiu_image(const gchar *tiuname, const gchar *outputdir, GError **error);
+extern gboolean extract_tiu_image(const gchar *tiuname, const gchar *outputdir, GError **error);
 extern gboolean create_images (const gchar *input, GError **error);
 
 /* Internal, move in separate header */

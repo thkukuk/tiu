@@ -59,8 +59,8 @@ resolve_tiu_path(const char *path)
 }
 
 gboolean
-apply_tiu_image(const gchar *tiuname, const gchar *outputdir,
-		GError **error)
+extract_tiu_image(const gchar *tiuname, const gchar *outputdir,
+		  GError **error)
 {
   GError *ierror = NULL;
   TIUBundle *bundle = NULL;
