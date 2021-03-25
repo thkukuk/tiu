@@ -1,5 +1,6 @@
 #include <glib.h>
 #include <gio/gio.h>
+#include <glib/gprintf.h>
 
 #include "tiu.h"
 
@@ -11,6 +12,9 @@ casync_extract(const gchar *input, const gchar *dest, const gchar *store,
   g_autoptr(GSubprocess) sproc = NULL;
   GError *ierror = NULL;
   g_autoptr(GPtrArray) args = g_ptr_array_new_full(15, g_free);
+
+  if (debug_flag)
+    g_printf("Extract '%s' to '%s' with casync...\n", input, dest);
 
   g_ptr_array_add(args, g_strdup("casync"));
   g_ptr_array_add(args, g_strdup("extract"));
@@ -24,7 +28,7 @@ casync_extract(const gchar *input, const gchar *dest, const gchar *store,
       g_ptr_array_add(args, g_strdup("--store"));
       g_ptr_array_add(args, g_strdup(store));
     }
-  /* https://github.com/systemd/casync/issues/240 */
+  /* XXX https://github.com/systemd/casync/issues/240 */
   g_ptr_array_add(args, g_strdup("--seed-output=no"));
   g_ptr_array_add(args, g_strdup(input));
   g_ptr_array_add(args, g_strdup(dest));

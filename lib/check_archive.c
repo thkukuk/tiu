@@ -25,34 +25,6 @@ is_remote_scheme (const gchar *scheme)
     (g_strcmp0(scheme, "ftp") == 0);
 }
 
-/* Download tui file to temporary location if remote URI is given */
-static gboolean
-fetch_image (const gchar *tiuname, GError **error __attribute__((unused)))
-{
-  gchar *tiuscheme = g_uri_parse_scheme(tiuname);
-
-  if (is_remote_scheme(tiuscheme))
-    {
-      /* XXX gchar *origpath = g_strdup(tiuname); */
-      gchar *path = g_build_filename(g_get_tmp_dir(), "tiu", NULL);
-
-      if (debug_flag)
-	g_printf("Remote URI detected, downloading tiu archive to '%s'...\n", path);
-
-#if 0 /* XXX */
-      if (!download_file(path, origpath, &ierror))
-	{
-	  g_propagate_prefixed_error(error, ierror, "Failed to download tiu archive %s: ", origpath);
-	  return FALSE;
-	}
-#endif
-      if (debug_flag)
-	g_printf("Downloaded tiu archive to '%s'\n", path);
-    }
-
-  return TRUE;
-}
-
 /*
   Attempts to read and verify the squashfs magic to verify having
   a valid tiu archive.
@@ -395,11 +367,29 @@ check_tiu_archive(const gchar *tiuname, TIUBundle **bundle, GError **error)
   guint64 sigsize;
   goffset offset;
 
+  gchar *tiuscheme = g_uri_parse_scheme(tiuname);
 
-  if (!fetch_image(tiuname, &ierror))
+  if (is_remote_scheme(tiuscheme))
     {
-      g_propagate_error(error, ierror);
-      return FALSE;
+      ibundle->origpath = g_strdup(tiuname);
+      ibundle->path = g_build_filename(g_get_tmp_dir(), "tiu", NULL);
+
+      if (debug_flag)
+	g_printf("Remote URI detected, downloading tiu archive to '%s'...\n", ibundle->path);
+
+#if 0 /* XXX */
+      if (!download_file(path, origpath, &ierror))
+	{
+	  g_propagate_prefixed_error(error, ierror, "Failed to download tiu archive %s: ", origpath);
+	  return FALSE;
+	}
+#endif
+      if (debug_flag)
+	g_printf("Downloaded tiu archive to '%s'\n", ibundle->path);
+    }
+  else
+    {
+      ibundle->path = g_strdup(tiuname);
     }
 
   if (debug_flag)

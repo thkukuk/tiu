@@ -78,6 +78,15 @@ rm_dir_content (const gchar *dir, const gchar *tmpdir, GError **error)
         return FALSE;
       if (child == NULL)
         break;
+
+      /* Don't follow symlinks! */
+      if (g_file_query_file_type (child, G_FILE_QUERY_INFO_NOFOLLOW_SYMLINKS,
+				  NULL) == G_FILE_TYPE_SYMBOLIC_LINK)
+	{
+	  g_file_delete (child, NULL, error);
+	  continue;
+	}
+
       if (!rm_rf (child, NULL, error))
         return FALSE;
     }
@@ -452,9 +461,9 @@ create_images (const gchar *input, GError **gerror)
       return FALSE;
     }
 
-  gchar *output_tiuidx = g_strjoin(".", pvers, "caidx", NULL);
+  gchar *output_tiuidx = g_strjoin(".", pvers, "tiuidx", NULL);
 
-  econf_setStringValue(manifest, "update", "FORMAT", "tiuidx");
+  econf_setStringValue(manifest, "update", "FORMAT", "caidx");
   econf_setStringValue(manifest, "update", "ARCHIVE", pvers_idx);
   econf_writeFile(manifest, tmpdir, "manifest.tiu");
 

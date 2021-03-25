@@ -1,5 +1,6 @@
 #include <errno.h>
 #include <glib/gprintf.h>
+#include <libeconf.h>
 
 #include "tiu.h"
 
@@ -86,11 +87,37 @@ extract_tiu_image(const gchar *tiuname, const gchar *outputdir,
       return FALSE;
     }
 
-  gchar *inputfile = "/var/lib/tiu/mount/openSUSE-MicroOS-20210320.catar"; /* XXX */
+
+  econf_err ec_err;
+  econf_file *tiumf = NULL;
+  gchar *tiumf_name = g_strjoin("/", bundle->mount_point, "manifest.tiu", NULL);
+
+  if ((ec_err = econf_readFile (&tiumf, tiumf_name, "=", "#")))
+    {
+      g_set_error(error, G_FILE_ERROR, G_FILE_ERROR_FAILED,
+		  "Couldn't read manifest.tiu: %s",
+		  econf_errString(ec_err));
+      umount_tiu_archive(bundle, &ierror);
+      return FALSE;
+    }
+
+  gchar *archive_name = NULL;
+  if ((ec_err = econf_getStringValue (tiumf, "update", "ARCHIVE",
+				     &archive_name)))
+    {
+      g_set_error(error, G_FILE_ERROR, G_FILE_ERROR_FAILED,
+		  "Couldn't read 'ARCHIVE' entry: %s",
+		  econf_errString(ec_err));
+      umount_tiu_archive(bundle, &ierror);
+      return FALSE;
+    }
+
+  gchar *inputfile = g_strjoin("/", bundle->mount_point, archive_name, NULL);
   gchar *store = NULL;
   if (!casync_extract(inputfile, outputdir, store, NULL, &ierror))
     {
       g_propagate_error(error, ierror);
+      g_clear_error(&ierror);
       umount_tiu_archive(bundle, &ierror);
       /* XXX warn if umount fails */
       return FALSE;

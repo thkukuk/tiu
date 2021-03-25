@@ -26,6 +26,15 @@ rm_rf (GFile *file, GCancellable *cancellable, GError **error)
         return FALSE;
       if (child == NULL)
         break;
+
+      /* Don't follow symlinks! */
+      if (g_file_query_file_type (child, G_FILE_QUERY_INFO_NOFOLLOW_SYMLINKS,
+				  cancellable) == G_FILE_TYPE_SYMBOLIC_LINK)
+	{
+	  g_file_delete (child, cancellable, error);
+	  continue;
+	}
+
       if (!rm_rf (child, cancellable, error))
         return FALSE;
     }

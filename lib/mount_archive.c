@@ -20,6 +20,9 @@ setup_loop(gint fd, gint *loopfd_out, gchar **loopname_out,
   guint tries;
   struct loop_info64 loopinfo;
 
+  if (debug_flag)
+    g_printf("Setup loop device...\n");
+
   g_return_val_if_fail(fd >= 0, FALSE);
   g_return_val_if_fail(loopfd_out != NULL, FALSE);
   g_return_val_if_fail(loopname_out != NULL && *loopname_out == NULL, FALSE);
@@ -31,9 +34,7 @@ setup_loop(gint fd, gint *loopfd_out, gchar **loopname_out,
   controlfd = open("/dev/loop-control", O_RDWR|O_CLOEXEC);
   if (controlfd < 0) {
     int err = errno;
-    g_set_error(error,
-		G_FILE_ERROR,
-		g_file_error_from_errno(err),
+    g_set_error(error, G_FILE_ERROR, g_file_error_from_errno(err),
 		"Failed to open /dev/loop-control: %s", g_strerror(err));
     res = FALSE;
     goto out;
@@ -107,9 +108,7 @@ setup_loop(gint fd, gint *loopfd_out, gchar **loopname_out,
   } while (looprc && errno == EAGAIN);
   if (looprc < 0) {
     int err = errno;
-    g_set_error(error,
-		G_FILE_ERROR,
-		g_file_error_from_errno(err),
+    g_set_error(error, G_FILE_ERROR, g_file_error_from_errno(err),
 		"Failed to set loop device configuration: %s", g_strerror(err));
     ioctl(loopfd, LOOP_CLR_FD, 0);
     res = FALSE;
@@ -121,7 +120,8 @@ setup_loop(gint fd, gint *loopfd_out, gchar **loopname_out,
     g_debug("Failed to set loop device block size to 4096, continuing");
   }
 
-  g_message("Configured loop device '%s' for %" G_GOFFSET_FORMAT " bytes", loopname, size);
+  if (debug_flag)
+    g_printf ("Configured loop device '%s' for %" G_GOFFSET_FORMAT " bytes\n", loopname, size);
 
   *loopfd_out = loopfd;
   loopfd = -1;
@@ -143,6 +143,9 @@ umount_tiu_archive (TIUBundle *bundle, GError **error)
   g_return_val_if_fail(error == NULL || *error == NULL, FALSE);
 
   g_assert_nonnull(bundle->mount_point);
+
+  if (debug_flag)
+    g_printf("Umount '%s'...\n", bundle->mount_point);
 
   if (umount2 (bundle->mount_point, UMOUNT_NOFOLLOW))
     {
@@ -187,7 +190,7 @@ mount_tiu_archive(TIUBundle *bundle, GError **error)
     }
 
   if (debug_flag)
-    g_printf("Mounting tiu archive '%s' to '%s'", bundle->path, mountpoint);
+    g_printf("Mounting tiu archive '%s' to '%s'\n", bundle->path, mountpoint);
 
   bundlefd = g_file_descriptor_based_get_fd(G_FILE_DESCRIPTOR_BASED(bundle->stream));
   res = setup_loop(bundlefd, &loopfd, &loopname, bundle->size, &ierror);
