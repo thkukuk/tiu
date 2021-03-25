@@ -136,11 +136,5 @@ main(int argc, char **argv)
 	}
     }
 
-  if (debug_flag)
-    {
-      g_printf("tiu archive: %s\n", squashfs_file);
-      g_printf("output directory: %s\n", target_dir);
-    }
-
   return 0;
 }
