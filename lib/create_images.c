@@ -346,6 +346,7 @@ create_images (const gchar *input, GError **gerror)
   if ((error = econf_getStringValue (os_release, "", "VERSION_ID",
 				     &version_id)))
     {
+      /* XXX g_set_error */
       fprintf (stderr,
 	       "ERROR: couldn't read \"VERSION_ID\" from os-release: %s\n",
 	       econf_errString(error));
@@ -356,6 +357,7 @@ create_images (const gchar *input, GError **gerror)
   if ((error = econf_getStringValue (os_release, "", "NAME",
 				     &product_name)))
     {
+      /* XXX g_set_error */
       fprintf (stderr,
 	       "ERROR: couldn't read \"NAME\" from os-release: %s\n",
 	       econf_errString(error));
@@ -375,6 +377,7 @@ create_images (const gchar *input, GError **gerror)
   if ((error = econf_getStringValue (os_release, "", "ID",
 				     &product_id)))
     {
+      /* XXX g_set_error */
       fprintf (stderr,
 	       "ERROR: couldn't read \"ID\" from os-release: %s\n",
 	       econf_errString(error));
@@ -405,14 +408,16 @@ create_images (const gchar *input, GError **gerror)
 
   if (!casync_make (tmpdir, pvers_idx, pvers_str, gerror))
     {
-      fprintf (stderr, "ERROR: no caidx archive created, aborting...\n");
+      if (debug_flag)
+	fprintf (stderr, "ERROR: no caidx archive created, aborting...\n");
       cleanup (tmpdir);
       return FALSE;
     }
 
   if (!casync_make (tmpdir, pvers_tar, NULL, gerror))
     {
-      fprintf (stderr, "ERROR: no catar archive created, aborting...\n");
+      if (debug_flag)
+	fprintf (stderr, "ERROR: no catar archive created, aborting...\n");
       cleanup (tmpdir);
       return FALSE;
     }
@@ -420,8 +425,10 @@ create_images (const gchar *input, GError **gerror)
   econf_file *manifest;
   if ((error = econf_newKeyFile(&manifest, '=', '#')))
     {
-      fprintf (stderr, "ERROR: couldn't create manifest file: %s\n",
-               econf_errString(error));
+      if (debug_flag)
+	fprintf (stderr, "ERROR: couldn't create manifest file: %s\n",
+		 econf_errString(error));
+      cleanup (tmpdir);
       return FALSE;
     }
 
@@ -458,11 +465,22 @@ create_images (const gchar *input, GError **gerror)
     }
 
   /* XXX error handling */
-  calc_verity(output_tiutar, gerror);
-  calc_verity(output_tiuidx, gerror);
+  if (!calc_verity(output_tiutar, gerror))
+    {
+      cleanup (tmpdir);
+      return FALSE;
+    }
+  if (!calc_verity(output_tiuidx, gerror))
+    {
+      cleanup (tmpdir);
+      return FALSE;
+    }
 
   if (!workdir_destroy (tmpdir, NULL))
-    return FALSE;
+    {
+      /* XXX g_set_error */
+      return FALSE;
+    }
 
   return TRUE;
 }
