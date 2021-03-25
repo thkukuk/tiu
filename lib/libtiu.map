@@ -1,5 +1,6 @@
 LIBTIU_1.0 {
   global:
+    apply_tiu_image;
     create_images;
     debug_flag;
   local:

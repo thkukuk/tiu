@@ -136,7 +136,7 @@ prepare_manifest(const tiu_manifest *mf)
   g_autoptr(GKeyFile) key_file = NULL;
 
   key_file = g_key_file_new();
-  g_key_file_set_string(key_file, "tiu", "format", "verity");
+  g_key_file_set_string(key_file, "tiu", "format", mf->format);
   if (mf->verity_hash)
     g_key_file_set_string(key_file, "tiu", "verity-hash", mf->verity_hash);
   if (mf->verity_salt)
@@ -256,6 +256,7 @@ calc_verity (const gchar *tiufile, GError **error)
   verity_size = combined_size*4096 - offset;
   g_assert(verity_size % 4096 == 0);
 
+  manifest.format = g_strdup("verity");
   manifest.verity_salt = r_hex_encode(salt, sizeof(salt));
   manifest.verity_hash = r_hex_encode(hash, sizeof(hash));
   manifest.verity_size = verity_size;

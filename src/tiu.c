@@ -10,11 +10,24 @@ static GOptionEntry entries_create[] = {
 };
 static GOptionGroup *create_group;
 
+static gchar *squashfs_file = NULL;
+static gchar *target_dir = NULL;
+static GOptionEntry entries_apply[] = {
+  {"archive", 'a', 0, G_OPTION_ARG_FILENAME, &squashfs_file, "tiu archive", "FILENAME"},
+  {"output", 'o', 0, G_OPTION_ARG_FILENAME, &target_dir, "target directory", "DIRECTORY"},
+  {0}
+};
+static GOptionGroup *apply_group;
+
 static void
 init_group_options (void)
 {
+  apply_group = g_option_group_new("apply", "Apply options:",
+				    "Show help options for apply", NULL, NULL);
+  g_option_group_add_entries(apply_group, entries_apply);
+
   create_group = g_option_group_new("create", "Create options:",
-				    "create", NULL, NULL);
+				    "Show help options for create", NULL, NULL);
   g_option_group_add_entries(create_group, entries_create);
 }
 
@@ -39,8 +52,10 @@ main(int argc, char **argv)
   context = g_option_context_new("<COMMAND>");
   g_option_context_add_main_entries (context, options, NULL);
   g_option_context_set_description (context, "List of tiu commands:\n"
+				    "  apply\t\tApply a tiu update file\n"
 				    "  create\tCreate a tiu update file\n"
 				    );
+  g_option_context_add_group (context, apply_group);
   g_option_context_add_group (context, create_group);
 
   if (!g_option_context_parse(context, &argc, &argv, &error))
@@ -75,8 +90,56 @@ main(int argc, char **argv)
 	  return 1;
 	}
 
-      if (!create_images(input_tar, NULL))
-	return 1;
+      if (!create_images(input_tar, &error))
+	{
+	  if (error)
+	    {
+	      g_fprintf (stderr, "ERROR: %s\n", error->message);
+	      g_clear_error (&error);
+	    }
+	  else
+	    g_fprintf (stderr, "ERROR: creating tiu archives failed!\n");
+	  exit (1);
+	}
+    }
+  else if (strcmp (argv[1], "apply") == 0)
+    {
+      if (squashfs_file == NULL)
+	{
+	  fprintf (stderr, "ERROR: no tiu archive as input specified!\n");
+	  exit (1);
+	}
+
+      if (target_dir == NULL)
+	{
+	  fprintf (stderr, "ERROR: no target directory specified!\n");
+	  exit (1);
+	}
+
+      if (!g_file_test(target_dir, G_FILE_TEST_IS_DIR))
+	{
+	  fprintf (stderr, "ERROR: target directory does not exist!\n");
+	  exit (1);
+	}
+
+
+      if (!apply_tiu_image(squashfs_file, target_dir, &error))
+	{
+	  if (error)
+	    {
+	      g_fprintf (stderr, "ERROR: %s\n", error->message);
+	      g_clear_error (&error);
+	    }
+	  else
+	    g_fprintf (stderr, "ERROR: applying the archive failed!\n");
+	  exit (1);
+	}
+    }
+
+  if (debug_flag)
+    {
+      g_printf("tiu archive: %s\n", squashfs_file);
+      g_printf("output directory: %s\n", target_dir);
     }
 
   return 0;

@@ -5,7 +5,9 @@ project(
   default_options : ['buildtype=debugoptimized',
   		  'default_library=shared',
 		  'b_pie=true',
-		  'warning_level=3',],
+		  'warning_level=3',
+                  'c_std=gnu99',
+                  ],
   license : 'LGPLv2.1+',
   version : '0.0.1',
 )
@@ -40,8 +42,13 @@ possible_cc_flags = [
 add_project_arguments(cc.get_supported_arguments(possible_cc_flags), language : 'c')
 
 libtiu_src = files(
+  'lib/apply_image.c',
+  'lib/casync_extract.c',
   'lib/casync_make.c',
+  'lib/check_archive.c',
   'lib/create_images.c',
+  'lib/dm.c',
+  'lib/mount_archive.c',
   'lib/rm_rf.c',
   'lib/variables.c',
   'lib/verity_hash.c',
