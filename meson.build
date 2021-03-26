@@ -51,6 +51,7 @@ libtiu_src = files(
   'lib/create_images.c',
   'lib/dm.c',
   'lib/mount_archive.c',
+  'lib/network.c',
   'lib/rm_rf.c',
   'lib/variables.c',
   'lib/verity_hash.c',
@@ -68,6 +69,7 @@ openssl_dep = dependency('libcrypto')
 gio_dep = dependency('gio-2.0')
 gio_unix_dep = dependency('gio-unix-2.0')
 libeconf_dep = dependency('libeconf')
+libcurl_dep = dependency('libcurl')
 
 lib = library(
   'tiu',
@@ -78,7 +80,8 @@ lib = library(
   link_depends : mapfile,
   version : meson.project_version(),
   soversion : '0',
-  dependencies : [gio_dep, gio_unix_dep, libeconf_dep, openssl_dep],
+  dependencies : [gio_dep, gio_unix_dep, libeconf_dep, openssl_dep,
+		libcurl_dep, ],
 )
 
 install_headers('include/tiu.h')

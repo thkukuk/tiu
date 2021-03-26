@@ -5,12 +5,14 @@
 #include <fcntl.h>
 #include <sys/vfs.h>
 #include <glib/gprintf.h>
+#include <glib/gstdio.h>
 #include <gio/gfiledescriptorbased.h>
 #include <openssl/cms.h>
 #include <openssl/x509.h>
 
 #include "tiu.h"
 #include "verity_hash.h"
+#include "network.h"
 
 #ifndef SQUASHFS_MAGIC
 #define SQUASHFS_MAGIC 0x73717368
@@ -359,6 +361,7 @@ check_manifest(const tiu_manifest *mf, GError **error __attribute__((unused)))
 gboolean
 check_tiu_archive(const gchar *tiuname, TIUBundle **bundle, GError **error)
 {
+  const gchar *cachedir = "/var/cache/tiu";
   GError *ierror = NULL;
   g_autoptr(GFile) tiufile = NULL;
   g_autoptr(GFileInfo) tiuinfo = NULL;
@@ -372,18 +375,32 @@ check_tiu_archive(const gchar *tiuname, TIUBundle **bundle, GError **error)
   if (is_remote_scheme(tiuscheme))
     {
       ibundle->origpath = g_strdup(tiuname);
-      ibundle->path = g_build_filename(g_get_tmp_dir(), "tiu", NULL);
+      ibundle->path = g_build_filename("/var/cache/tiu", "tiu", NULL);
+
+      if (g_mkdir_with_parents(cachedir, 0700) != 0)
+	{
+	  g_set_error(error, G_FILE_ERROR, G_FILE_ERROR_FAILED,
+                      "Failed creating cache directory '%s'", cachedir);
+          return FALSE;
+	}
 
       if (debug_flag)
 	g_printf("Remote URI detected, downloading tiu archive to '%s'...\n", ibundle->path);
 
-#if 0 /* XXX */
-      if (!download_file(path, origpath, &ierror))
+      if (!network_init(&ierror))
 	{
-	  g_propagate_prefixed_error(error, ierror, "Failed to download tiu archive %s: ", origpath);
+	  g_propagate_error(error, ierror);
 	  return FALSE;
 	}
-#endif
+
+      /* Make sure the file does not exist in the cache */
+      g_remove (ibundle->path);
+      if (!download_file(ibundle->path, ibundle->origpath,
+			 DEFAULT_MAX_DOWNLOAD_SIZE, &ierror))
+	{
+	  g_propagate_prefixed_error(error, ierror, "Failed to download tiu archive %s: ", ibundle->origpath);
+	  return FALSE;
+	}
       if (debug_flag)
 	g_printf("Downloaded tiu archive to '%s'\n", ibundle->path);
     }
@@ -395,7 +412,7 @@ check_tiu_archive(const gchar *tiuname, TIUBundle **bundle, GError **error)
   if (debug_flag)
     g_printf("Verifying tiu payload...\n");
 
-  tiufile = g_file_new_for_path(tiuname);
+  tiufile = g_file_new_for_path(ibundle->path);
   ibundle->stream = G_INPUT_STREAM(g_file_read(tiufile, NULL, &ierror));
   if (ibundle->stream == NULL)
     {
