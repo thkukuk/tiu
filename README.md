@@ -81,16 +81,16 @@ are some bugs preventing the usage without workarounds:
 ## TODO
 
 - [x] Build image as tar archive from MicroOS RPMs in OBS
-- [ ] Create manifest which defines:
-  - [ ] ID of OS which is updateable (/etc/os-release)
-  - [ ] Supported architecture
-  - [ ] Minimum version of OS which can be updated
-  - [ ] Version of update
+- [x] Create manifest which defines:
+  - [x] ID of OS which is updateable (/etc/os-release)
+  - [x] Supported architecture
+  - [x] Minimum version of OS which can be updated
+  - [x] Version of update
   - [ ] Digest of image (casync digest)
 - [ ] Verify that the format is really secure
-- [ ] Use dm-verity (see RAUC)
-- [ ] Build tiutar archive (squashfs image with manifest and catar archive)
-- [ ] Build tiuidx archive (swuashfs image with manifest and caidx file, store available via http/https)
+- [x] Use dm-verity (see RAUC)
+- [x] Build tiutar archive (squashfs image with manifest and catar archive)
+- [x] Build tiuidx archive (swuashfs image with manifest and caidx file, store available via http/https)
 - [ ] SELinux (installs in /etc and /var)
 - [ ] update-alternatives (creates data in /var and symlinks in /etc)
 - [x] Kernel update incl. rebuilding initrd
