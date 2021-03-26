@@ -9,7 +9,73 @@ There are two key requirements for allowing robust updates of a system:
 
 Additional, no unauthorized entity should be able to update your device. There must be a secure channel to transfer the update and the update needs to be signed which allows to verify its author.
 
-## Requirements for update
+## TIU
+
+`tiu` is heavily inspired by [Rauc](https://github.com/rauc/rauc/). It
+controls the update process on systems using atomic updates and is both, a
+build host tool that allows to create TIU archives and an update client.
+
+### Features
+
+* Different update sources
+  * OTA (Network protocol support using libcurl (https, http, ftp, ssh, ...))
+  * USB Stick
+* Network streaming mode using casync
+  * chunk-based binary delta updates
+  * significantly reduce download size
+  * no extra storage required
+
+
+### Building TIU
+
+_Prerequires:_
+* meson
+* openssl
+* gio-2.0
+* gio-unix-2.0
+* libeconf
+* libcurl
+
+_Build:_
+```
+# meson <builddir>
+# cd <builddir>
+# meson compile
+```
+
+_Installation:_
+```
+# meson install
+```
+
+### Required Host Tools
+
+The following tools are runtime requirements of `tiu` to build tiu archives:
+* tar
+* casync
+* btrfs utility
+* mksquashfs
+
+### Required Target Client Tools
+
+The following tools are runtime requirements of  `tiu` to install tiu
+archives:
+* casync
+
+### Building tiu archives
+
+```
+# tiu create --tar system-update.tar.xz
+```
+
+### Extracting tiu archive
+
+```
+# mkdir -p /new/root
+# tiu extract --archive system-update.tiutar --output /new/root
+```
+
+## Generic Requirements for Updates
 
 * Provide tags to identify, that the update image is compatible with this installation
 * Version number check, allow downgrades?
