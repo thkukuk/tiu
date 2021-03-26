@@ -1,15 +1,17 @@
-project(
-  'tiu',
-  'c',
-  meson_version : '>= 0.49.0',
-  default_options : ['buildtype=debugoptimized',
-  		  'default_library=shared',
-		  'b_pie=true',
-		  'warning_level=3',
-                  'c_std=gnu99',
-                  ],
-  license : 'LGPLv2.1+',
-  version : '0.0.1',
+project('tiu', 'c',
+	version : '0.0.1',
+	license : 'LGPLv2.1+',
+	default_options : [
+		'buildtype=debugoptimized',
+		'default_library=shared',
+		'b_pie=true',
+		'warning_level=3',
+        	'c_std=gnu99',
+		'prefix=/usr',
+		'sysconfdir=/etc',
+		'localstatedir=/var',
+	],
+	meson_version : '>= 0.49.0',
 )
 
 cc = meson.get_compiler('c')

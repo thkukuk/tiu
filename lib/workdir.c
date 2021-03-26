@@ -11,7 +11,7 @@ create_btrfs_subvolume (const gchar *subvolume, GError **error)
   GError *ierror = NULL;
   GPtrArray *args = g_ptr_array_new_full(8, g_free);
 
-  g_ptr_array_add(args, g_strdup("/usr/sbin/btrfs"));
+  g_ptr_array_add(args, g_strdup("btrfs"));
   g_ptr_array_add(args, g_strdup("subvolume"));
   g_ptr_array_add(args, g_strdup("create"));
   g_ptr_array_add(args, g_strdup(subvolume));
@@ -43,7 +43,7 @@ delete_btrfs_subvolume (const gchar *subvolume, GError **error)
   GError *ierror = NULL;
   GPtrArray *args = g_ptr_array_new_full(8, g_free);
 
-  g_ptr_array_add(args, g_strdup("/usr/sbin/btrfs"));
+  g_ptr_array_add(args, g_strdup("btrfs"));
   g_ptr_array_add(args, g_strdup("subvolume"));
   g_ptr_array_add(args, g_strdup("delete"));
   g_ptr_array_add(args, g_strdup(subvolume));

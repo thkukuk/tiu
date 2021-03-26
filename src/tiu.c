@@ -52,7 +52,7 @@ main(int argc, char **argv)
   context = g_option_context_new("<COMMAND>");
   g_option_context_add_main_entries (context, options, NULL);
   g_option_context_set_description (context, "List of tiu commands:\n"
-				    "  extract\t\tExtract a tiu archive\n"
+				    "  extract\tExtract a tiu archive\n"
 				    "  create\tCreate a tiu update file\n"
 				    );
   g_option_context_add_group (context, extract_group);
