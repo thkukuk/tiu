@@ -28,7 +28,7 @@ build host tool that allows to create TIU archives and an update client.
 
 ### Building TIU
 
-**Prerequires:**
+#### Prerequires:
 * meson
 * openssl
 * gio-2.0
@@ -36,14 +36,14 @@ build host tool that allows to create TIU archives and an update client.
 * libeconf
 * libcurl
 
-**Build:**
+#### Build:
 ```
 # meson <builddir>
 # cd <builddir>
 # meson compile
 ```
 
-**Installation:**
+#### Installation:
 ```
 # meson install
 ```
