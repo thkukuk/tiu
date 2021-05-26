@@ -18,15 +18,6 @@
 #define SQUASHFS_MAGIC 0x73717368
 #endif
 
-static gboolean
-is_remote_scheme (const gchar *scheme)
-{
-  return (g_strcmp0(scheme, "http") == 0) ||
-    (g_strcmp0(scheme, "https") == 0) ||
-    (g_strcmp0(scheme, "sftp") == 0) ||
-    (g_strcmp0(scheme, "ftp") == 0);
-}
-
 /*
   Attempts to read and verify the squashfs magic to verify having
   a valid tiu archive.
@@ -375,7 +366,7 @@ check_tiu_archive(const gchar *tiuname, TIUBundle **bundle, GError **error)
   if (is_remote_scheme(tiuscheme))
     {
       ibundle->origpath = g_strdup(tiuname);
-      ibundle->path = g_build_filename("/var/cache/tiu", "tiu", NULL);
+      ibundle->path = g_build_filename(cachedir, "tiu", NULL);
 
       if (g_mkdir_with_parents(cachedir, 0700) != 0)
 	{

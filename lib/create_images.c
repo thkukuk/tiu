@@ -3,10 +3,12 @@
 #include <libeconf.h>
 #include <glib/gprintf.h>
 #include <gio/gfiledescriptorbased.h>
+#include <glib/gstdio.h>
 #include <openssl/rand.h>
 
 #include "tiu.h"
 #include "verity_hash.h"
+#include "network.h"
 
 static void
 cleanup(const gchar *tmpdir)
@@ -324,15 +326,58 @@ calc_verity (const gchar *tiufile, GError **error)
 gboolean
 create_images (const gchar *input, GError **gerror)
 {
+  const gchar *cachedir = "/var/cache/tiu";
   const gchar *tmpdir = NULL;
   econf_file *os_release = NULL;
   econf_err error;
+  g_autofree gchar *lf = NULL;
 
   if (debug_flag)
     g_printf("Start creating tiu update images from '%s'...\n",
 	     input);
 
-  if (!workdir_setup (input, &tmpdir, NULL))
+  gchar *scheme = g_uri_parse_scheme(input);
+
+  if (is_remote_scheme(scheme))
+    {
+      GError *ierror = NULL;
+
+      lf = g_build_filename(cachedir, "input", NULL);
+
+      if (g_mkdir_with_parents(cachedir, 0700) != 0)
+        {
+          g_set_error(gerror, G_FILE_ERROR, G_FILE_ERROR_FAILED,
+                      "Failed creating cache directory '%s'", cachedir);
+          return FALSE;
+        }
+
+      if (debug_flag)
+        g_printf("Remote URI detected, downloading input archive to '%s'...\n", lf);
+
+      if (!network_init(&ierror))
+        {
+          g_propagate_error(gerror, ierror);
+          return FALSE;
+        }
+
+      /* Make sure the file does not exist in the cache */
+      g_remove (lf);
+      if (!download_file(lf, input, DEFAULT_MAX_DOWNLOAD_SIZE, &ierror))
+        {
+          g_propagate_prefixed_error(gerror, ierror,
+				     "Failed to download input archive %s: ",
+				     input);
+          return FALSE;
+        }
+      if (debug_flag)
+        g_printf("Downloaded input archive to '%s'\n", lf);
+    }
+  else
+    {
+      lf = g_strdup(input);
+    }
+
+  if (!workdir_setup (lf, &tmpdir, NULL))
     {
       cleanup (tmpdir);
       return FALSE;

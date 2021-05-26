@@ -8,6 +8,15 @@
 
 #include "network.h"
 
+gboolean
+is_remote_scheme (const gchar *scheme)
+{
+  return (g_strcmp0(scheme, "http") == 0) ||
+    (g_strcmp0(scheme, "https") == 0) ||
+    (g_strcmp0(scheme, "sftp") == 0) ||
+    (g_strcmp0(scheme, "ftp") == 0);
+}
+
 /* We need to make sure that we can support large bundles. */
 G_STATIC_ASSERT(sizeof(curl_off_t) == 8);
 

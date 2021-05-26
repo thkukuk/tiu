@@ -16,3 +16,5 @@ G_GNUC_WARN_UNUSED_RESULT;
 
 gboolean download_file(const gchar *target, const gchar *url, goffset limit, GError **error)
 G_GNUC_WARN_UNUSED_RESULT;
+
+gboolean is_remote_scheme (const gchar *scheme) G_GNUC_WARN_UNUSED_RESULT;
