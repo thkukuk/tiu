@@ -185,7 +185,7 @@ static gboolean
 calc_verity (const gchar *tiufile, GError **error)
 {
   GError *ierror = NULL;
-  g_autoptr(GBytes) sig = NULL;
+  g_autoptr(GBytes) mem_manifest = NULL;
   g_autoptr(GFile) file = NULL;
   g_autoptr(GFileIOStream) stream = NULL;
   GOutputStream *outstream = NULL; /* owned by the bundle stream */
@@ -200,7 +200,7 @@ calc_verity (const gchar *tiufile, GError **error)
   stream = g_file_open_readwrite (file, NULL, &ierror);
   if (stream == NULL) {
     g_propagate_prefixed_error(error, ierror,
-			       "failed to open tiu file for signing: ");
+			       "failed to open tiu archive for verity signature: ");
     return FALSE;
   }
   outstream = g_io_stream_get_output_stream(G_IO_STREAM(stream));
@@ -208,13 +208,13 @@ calc_verity (const gchar *tiufile, GError **error)
   if (!g_seekable_seek(G_SEEKABLE(stream),
 		       0, G_SEEK_END, NULL, &ierror)) {
     g_propagate_prefixed_error(error, ierror,
-			       "failed to seek to end of tiu file: ");
+			       "failed to seek to end of tiu archive: ");
     return FALSE;
   }
 
   offset = g_seekable_tell(G_SEEKABLE(stream));
   if (debug_flag)
-  g_printf("Payload size: %" G_GUINT64_FORMAT " bytes.\n", offset);
+    g_printf("Payload size: %" G_GUINT64_FORMAT " bytes.\n", offset);
 
   int bundlefd = g_file_descriptor_based_get_fd(G_FILE_DESCRIPTOR_BASED(outstream));
   guint8 salt[32] = {0};
@@ -272,22 +272,7 @@ calc_verity (const gchar *tiufile, GError **error)
   manifest.verity_hash = r_hex_encode(hash, sizeof(hash));
   manifest.verity_size = verity_size;
 
-#if 0 /* XXX */
-  sig = cms_sign_manifest(manifest,
-			  r_context()->certpath,
-			  r_context()->keypath,
-			  r_context()->intermediatepaths,
-			  &ierror);
-  if (sig == NULL) {
-    g_propagate_prefixed_error(
-			       error,
-			       ierror,
-			       "failed to sign manifest: ");
-    return FALSE;
-  }
-#endif
-
-  convert_manifest_to_mem(&sig, &manifest);
+  convert_manifest_to_mem(&mem_manifest, &manifest);
 
   if (!g_seekable_seek(G_SEEKABLE(stream), 0, G_SEEK_END, NULL, &ierror))
     {
@@ -297,28 +282,27 @@ calc_verity (const gchar *tiufile, GError **error)
     }
 
   offset = g_seekable_tell(G_SEEKABLE(stream));
-  g_debug("Signature offset: %" G_GUINT64_FORMAT " bytes.", offset);
-  if (!output_stream_write_bytes_all(outstream, sig, NULL, &ierror)) {
-    g_propagate_prefixed_error(
-			       error,
-			       ierror,
-			       "failed to append signature to bundle: ");
-    return FALSE;
-  }
+  if (debug_flag)
+    g_printf ("Manifest offset: %" G_GUINT64_FORMAT " bytes.\n", offset);
+  if (!output_stream_write_bytes_all(outstream, mem_manifest, NULL, &ierror))
+    {
+      g_propagate_prefixed_error(error, ierror,
+				 "failed to append manifest to archive: ");
+      return FALSE;
+    }
 
   offset = g_seekable_tell(G_SEEKABLE(stream)) - offset;
-  if (!output_stream_write_uint64_all(outstream, offset, NULL, &ierror)) {
-    g_propagate_prefixed_error(
-			       error,
-			       ierror,
-			       "failed to append signature size to bundle: ");
-    return FALSE;
-  }
+  if (!output_stream_write_uint64_all(outstream, offset, NULL, &ierror))
+    {
+      g_propagate_prefixed_error(error, ierror,
+				 "failed to append manifest size to archive: ");
+      return FALSE;
+    }
 
   offset = g_seekable_tell(G_SEEKABLE(stream));
 
   if (debug_flag)
-    g_printf("tiu file size: %" G_GUINT64_FORMAT " bytes.\n", offset);
+    g_printf ("tiu file size: %" G_GUINT64_FORMAT " bytes.\n", offset);
 
   return TRUE;
 }

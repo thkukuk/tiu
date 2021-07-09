@@ -13,6 +13,7 @@
 #include "tiu.h"
 #include "verity_hash.h"
 #include "network.h"
+#include "tiu-errors.h"
 
 #ifndef SQUASHFS_MAGIC
 #define SQUASHFS_MAGIC 0x73717368
@@ -49,9 +50,9 @@ input_stream_check_tiu_identifier(GInputStream *stream, GError **error)
 
   if (squashfs_id != GUINT32_TO_LE(SQUASHFS_MAGIC))
     {
-      /* XXX
-	 g_set_error(error, R_BUNDLE_ERROR, R_BUNDLE_ERROR_IDENTIFIER, "Invalid identifier. Did you pass a valid RAUC bundle?");
-      */
+      g_set_error(error, T_ARCHIVE_ERROR, T_ARCHIVE_ERROR_IDENTIFIER,
+		  "Invalid identifier. Did you pass a valid TIU archive?");
+
       return FALSE;
     }
 
@@ -143,25 +144,24 @@ check_access(int fd, GError **error)
   /* unexpected file type */
   if (!S_ISREG(archive_stat.st_mode))
     {
-      /* XXX g_set_error(error, R_BUNDLE_ERROR, R_BUNDLE_ERROR_UNSAFE, "unsafe bundle (not a regular file)"); */
+      g_set_error(error, T_ARCHIVE_ERROR, T_ARCHIVE_ERROR_UNSAFE,
+		  "unsafe bundle (not a regular file)");
       return FALSE;
     }
 
   /* owned by other user (except root) */
   if ((archive_stat.st_uid != 0) && (archive_stat.st_uid != geteuid()))
     {
-      /* XXX
-	 g_set_error(error, R_BUNDLE_ERROR, R_BUNDLE_ERROR_UNSAFE, "unsafe bundle uid %ju", (uintmax_t)archive_stat.st_uid);
-      */
+      g_set_error(error, T_ARCHIVE_ERROR, T_ARCHIVE_ERROR_UNSAFE,
+		  "unsafe bundle uid %ju", (uintmax_t)archive_stat.st_uid);
       return FALSE;
     }
 
   /* unsafe permissions (not a subset of 0755) */
   if (perm & ~(0755))
     {
-      /* XXX
-	 g_set_error(error, R_BUNDLE_ERROR, R_BUNDLE_ERROR_UNSAFE, "unsafe bundle permissions 0%jo", (uintmax_t)perm);
-      */
+      g_set_error(error, T_ARCHIVE_ERROR, T_ARCHIVE_ERROR_UNSAFE,
+		  "unsafe bundle permissions 0%jo", (uintmax_t)perm);
       return FALSE;
     }
 
@@ -184,23 +184,20 @@ check_access(int fd, GError **error)
 	{
 	  message = g_strerror(err);
 	}
-      g_fprintf(stderr, "could not ensure exclusive tiu archive access (F_SETLEASE): %s", message);
-      /* XXX
-	 g_set_error(error, R_BUNDLE_ERROR, R_BUNDLE_ERROR_UNSAFE,
-	 "could not ensure exclusive tiu archive access (F_SETLEASE): %s", message);
-      */
+      g_set_error(error, T_ARCHIVE_ERROR, T_ARCHIVE_ERROR_UNSAFE,
+		  "could not ensure exclusive tiu archive access (F_SETLEASE): %s",
+		  message);
+
       return FALSE;
     }
   if (fcntl(fd, F_GETLEASE) != F_RDLCK)
     {
-      /* XXX
-	 int err = errno;
+      int err = errno;
 
-	 g_set_error(error,
-	 R_BUNDLE_ERROR,
-	 R_BUNDLE_ERROR_UNSAFE,
-	 "could not ensure exclusive bundle access (F_GETLEASE): %s", g_strerror(err));
-      */
+      g_set_error(error, T_ARCHIVE_ERROR, T_ARCHIVE_ERROR_UNSAFE,
+		  "could not ensure exclusive bundle access (F_GETLEASE): %s",
+		  g_strerror(err));
+
       return FALSE;
   }
   if (fcntl(fd, F_SETLEASE, F_UNLCK))
@@ -209,7 +206,8 @@ check_access(int fd, GError **error)
       g_set_error(error,
 		  G_FILE_ERROR,
 		  g_file_error_from_errno(err),
-		  "failed to remove file lease on tiu archive: %s", g_strerror(err));
+		  "failed to remove file lease on tiu archive: %s",
+		  g_strerror(err));
       return FALSE;
     }
 
@@ -227,9 +225,7 @@ convert_manifest_from_mem(GBytes *mem, tiu_manifest **manifest, GError **error)
   data = g_bytes_get_data(mem, &length);
   if (data == NULL)
     {
-      /* XXX
-	 g_set_error(error, R_MANIFEST_ERROR, R_MANIFEST_ERROR_NO_DATA, "No data available");
-      */
+      g_set_error(error, T_MANIFEST_ERROR, T_MANIFEST_ERROR_NO_DATA, "No data available");
       return FALSE;
     }
 
@@ -358,7 +354,7 @@ check_tiu_archive(const gchar *tiuname, TIUBundle **bundle, GError **error)
   g_autoptr(GFileInfo) tiuinfo = NULL;
   g_autoptr(TIUBundle) ibundle = g_new0(TIUBundle, 1);
   g_autoptr(GBytes) manifest_bytes = NULL;
-  guint64 sigsize;
+  guint64 manifest_size;
   goffset offset;
 
   gchar *tiuscheme = g_uri_parse_scheme(tiuname);
@@ -432,10 +428,8 @@ check_tiu_archive(const gchar *tiuname, TIUBundle **bundle, GError **error)
 
   if (g_file_info_get_file_type(tiuinfo) != G_FILE_TYPE_REGULAR)
     {
-      /* XXX
-	 g_set_error(error, R_BUNDLE_ERROR, R_BUNDLE_ERROR_UNSAFE,
-	 "Bundle is not a regular file");
-      */
+      g_set_error(error, T_ARCHIVE_ERROR, T_ARCHIVE_ERROR_UNSAFE,
+		  "Bundle is not a regular file");
       return FALSE;
     }
 
@@ -446,7 +440,7 @@ check_tiu_archive(const gchar *tiuname, TIUBundle **bundle, GError **error)
       return FALSE;
     }
 
-  offset = sizeof(sigsize);
+  offset = sizeof(manifest_size);
   if (!g_seekable_seek(G_SEEKABLE(ibundle->stream),
 		       -offset, G_SEEK_END, NULL, &ierror))
     {
@@ -456,41 +450,37 @@ check_tiu_archive(const gchar *tiuname, TIUBundle **bundle, GError **error)
     }
   offset = g_seekable_tell(G_SEEKABLE(ibundle->stream));
 
-  if (!input_stream_read_uint64_all(ibundle->stream, &sigsize, NULL, &ierror))
+  if (!input_stream_read_uint64_all(ibundle->stream, &manifest_size, NULL, &ierror))
     {
       g_propagate_prefixed_error(error, ierror,
-				 "Failed to read signature size from tiu archive: ");
+				 "Failed to read manifest size from tiu archive: ");
       return FALSE;
     }
 
-  if (sigsize == 0)
+  if (manifest_size == 0)
     {
-      /* XXX
-	 g_set_error(error, R_BUNDLE_ERROR, R_BUNDLE_ERROR_SIGNATURE,
-	 "Signature size is 0");
-      */
+      g_set_error(error, T_ARCHIVE_ERROR, T_ARCHIVE_ERROR_SIGNATURE,
+		  "Manifest size is 0");
       return FALSE;
     }
-  /* sanity check: signature should be smaller than tiu archive size */
-  if (sigsize > (guint64)offset)
+  /* sanity check: manifest should be smaller than tiu archive size */
+  if (manifest_size > (guint64)offset)
     {
-      /* XXX
-	 g_set_error(error, R_BUNDLE_ERROR, R_BUNDLE_ERROR_SIGNATURE,
-	 "Signature size (%"G_GUINT64_FORMAT ") exceeds bundle size", sigsize);
-      */
+      g_set_error(error, T_ARCHIVE_ERROR, T_ARCHIVE_ERROR_SIGNATURE,
+		  "Manifest size (%"G_GUINT64_FORMAT ") exceeds archive size",
+		  manifest_size);
       return FALSE;
     }
-  /* sanity check: signature should be smaller than 64kiB */
-  if (sigsize > 0x4000000)
+  /* sanity check: manifest should be smaller than 64kiB */
+  if (manifest_size > 0x4000000)
     {
-      /* XXX
-	 g_set_error(error, R_BUNDLE_ERROR, R_BUNDLE_ERROR_SIGNATURE,
-	 "Signature size (%"G_GUINT64_FORMAT ") exceeds 64KiB", sigsize);
-      */
+      g_set_error(error, T_ARCHIVE_ERROR, T_ARCHIVE_ERROR_SIGNATURE,
+		  "Manifest size (%"G_GUINT64_FORMAT ") exceeds 64KiB",
+		  manifest_size);
       return FALSE;
     }
 
-  offset -= sigsize;
+  offset -= manifest_size;
   ibundle->size = offset;
 
   if (!g_seekable_seek(G_SEEKABLE(ibundle->stream),
@@ -502,30 +492,20 @@ check_tiu_archive(const gchar *tiuname, TIUBundle **bundle, GError **error)
     }
 
   if (debug_flag)
-    g_printf("Read signature data...\n");
+    g_printf("Read manifest data...\n");
 
-  if (!input_stream_read_bytes_all(ibundle->stream, &ibundle->sigdata, sigsize,
+  if (!input_stream_read_bytes_all(ibundle->stream, &ibundle->sigdata, manifest_size,
 				   NULL, &ierror))
     {
       g_propagate_prefixed_error(error, ierror,
-				 "Failed to read signature from tiu archive: ");
+				 "Failed to read manifest from tiu archive: ");
       return FALSE;
     }
 
 #if 0 /* XXX */
-  CMS_ContentInfo *cms = NULL;
-  X509_STORE *store = setup_x509_store(NULL, NULL, &ierror);
-  if (!store)
-    {
-      g_propagate_error(error, ierror);
-      return FALSE;
-    }
-#endif
-
   if (debug_flag)
     g_printf("Verifying tiu archive signature...\n");
 
-#if 0 /* XXX */
   if (!cms_verify_sig(sigdata, store, &cms, &manifest_bytes, &ierror))
     {
       g_propagate_error(error, ierror);
@@ -546,8 +526,7 @@ check_tiu_archive(const gchar *tiuname, TIUBundle **bundle, GError **error)
 
   if (manifest_bytes == NULL)
     {
-      /* XXX set error */
-      fprintf (stderr, "No manifest found\n");
+      g_set_error(error, T_MANIFEST_ERROR, T_MANIFEST_ERROR_NO_DATA, "No data available");
       return FALSE;
     }
 
@@ -577,10 +556,8 @@ check_tiu_archive(const gchar *tiuname, TIUBundle **bundle, GError **error)
 
   if (verity_create_or_verify_hash(1, fd, data_size/4096, NULL, root_digest, salt))
     {
-      /* XXX
-	 g_set_error(error, R_BUNDLE_ERROR, R_BUNDLE_ERROR_PAYLOAD,
-	 "bundle payload is corrupted");
-      */
+      g_set_error(error, T_ARCHIVE_ERROR, T_ARCHIVE_ERROR_PAYLOAD,
+		  "bundle payload is corrupted");
       return FALSE;
     }
 

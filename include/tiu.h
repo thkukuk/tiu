@@ -45,4 +45,3 @@ extern gboolean rm_rf (GFile *file, GCancellable *cancellable, GError **error);
 extern gboolean check_tiu_archive(const gchar *tiuname, TIUBundle **bundle, GError **error);
 extern gboolean umount_tiu_archive (TIUBundle *bundle, GError **error);
 extern gboolean mount_tiu_archive(TIUBundle *bundle, GError **error);
-

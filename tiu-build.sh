@@ -5,18 +5,9 @@ if [ "$(id -u)" != "0" ]; then
 	exit 1
 fi
 
-#wget https://download.opensuse.org/repositories/home:/kukuk:/tiu/images/openSUSE-MicroOS.x86_64-ContainerHost-tbz.tar.xz
-#if [ $? -ne 0 ]; then
-#    echo "ERROR downloading tar archive!"
-#    popd > /dev/null || exit
-#    rm -rf "${WORKDIR}"
-#    exit 1
-#fi
-
 build/tiu --debug create --tar https://download.opensuse.org/repositories/home:/kukuk:/tiu/images/openSUSE-MicroOS.x86_64-ContainerHost-tbz.tar.xz
 if [ $? -ne 0 ]; then
     echo "ERROR downloading tar archive!"
-    popd > /dev/null || exit
     rm -rf "${WORKDIR}"
     exit 1
 fi

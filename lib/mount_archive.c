@@ -171,6 +171,9 @@ mount_tiu_archive(TIUBundle *bundle, GError **error)
   gint loopfd = -1;
   gboolean res = FALSE;
 
+  if (debug_flag)
+    g_printf("Mount tiu archive...\n");
+
   g_return_val_if_fail(bundle != NULL, FALSE);
   g_return_val_if_fail(error == NULL || *error == NULL, FALSE);
 
