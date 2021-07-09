@@ -14,6 +14,7 @@ typedef enum {
 GQuark t_manifest_error_quark(void);
 
 typedef enum {
+  T_MANIFEST_CHECK_ERROR,
   T_MANIFEST_ERROR_NO_DATA,
 } TManifestError;
 

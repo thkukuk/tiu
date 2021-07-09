@@ -7,8 +7,6 @@
 #include <glib/gprintf.h>
 #include <glib/gstdio.h>
 #include <gio/gfiledescriptorbased.h>
-#include <openssl/cms.h>
-#include <openssl/x509.h>
 
 #include "tiu.h"
 #include "verity_hash.h"
@@ -107,8 +105,6 @@ input_stream_read_bytes_all(GInputStream *stream, GBytes **bytes,
  * //    trusted, though)
  * // - storage on an filesystem mounted from a block device with a non-root owner
  * - existing open file descriptors (via F_SETLEASE)
- *
- * XXX move to own file
  */
 static gboolean
 check_access(int fd, GError **error)
@@ -164,8 +160,6 @@ check_access(int fd, GError **error)
 		  "unsafe bundle permissions 0%jo", (uintmax_t)perm);
       return FALSE;
     }
-
-  /* XXX check if the filesystem is safe and the underlying device acceptable */
 
   /* check for other open file descriptors via leases (see fcntl(2)) */
   if (fcntl(fd, F_SETLEASE, F_RDLCK))
@@ -285,60 +279,52 @@ check_manifest(const tiu_manifest *mf, GError **error __attribute__((unused)))
   if ((mf->format == NULL) ||
       (strcmp (mf->format, "verity") != 0))
     {
-      /* XXX
-	 g_set_error(error, R_MANIFEST_ERROR, R_MANIFEST_CHECK_ERROR,
-	 "Unsupported format for external manifest");
-      */
+      g_set_error(error, T_MANIFEST_ERROR, T_MANIFEST_CHECK_ERROR,
+		  "Unsupported format for manifest");
       return FALSE;
     }
 
   if (!mf->verity_hash)
     {
-      /* XXX
-      g_set_error(error, R_MANIFEST_ERROR, R_MANIFEST_CHECK_ERROR, "Missing hash for verity bundle");
-      */
+      g_set_error(error, T_MANIFEST_ERROR, T_MANIFEST_CHECK_ERROR,
+		  "Missing verity hash");
       return FALSE;
     }
   tmp = r_hex_decode(mf->verity_hash, 32);
   if (!tmp)
     {
-      /* XXX
-	 g_set_error(error, R_MANIFEST_ERROR, R_MANIFEST_CHECK_ERROR, "Invalid hash for verity bundle");
-      */
+      g_set_error(error, T_MANIFEST_ERROR, T_MANIFEST_CHECK_ERROR,
+		  "Invalid verity hash");
       return FALSE;
     }
   g_free(tmp);
 
   if (!mf->verity_salt)
     {
-      /* XXX
-	 g_set_error(error, R_MANIFEST_ERROR, R_MANIFEST_CHECK_ERROR, "Missing salt for verity bundle");
-      */
+      g_set_error(error, T_MANIFEST_ERROR, T_MANIFEST_CHECK_ERROR,
+		  "Missing verity salt");
       return FALSE;
     }
   tmp = r_hex_decode(mf->verity_salt, 32);
   if (!tmp)
     {
-      /* XXX
-	 g_set_error(error, R_MANIFEST_ERROR, R_MANIFEST_CHECK_ERROR, "Invalid salt for verity bundle");
-      */
+      g_set_error(error, T_MANIFEST_ERROR, T_MANIFEST_CHECK_ERROR,
+		  "Invalid verity salt");
       return FALSE;
     }
   g_free(tmp);
 
   if (!mf->verity_size)
     {
-      /* XXX
-	 g_set_error(error, R_MANIFEST_ERROR, R_MANIFEST_CHECK_ERROR, "Missing size for verity bundle");
-      */
+      g_set_error(error, T_MANIFEST_ERROR, T_MANIFEST_CHECK_ERROR,
+		  "Missing verity size");
       return FALSE;
     }
 
   if (mf->verity_size % 4096)
     {
-      /* XXX
-	 g_set_error(error, R_MANIFEST_ERROR, R_MANIFEST_CHECK_ERROR, "Unaligned size for verity bundle");
-      */
+      g_set_error(error, T_MANIFEST_ERROR, T_MANIFEST_CHECK_ERROR,
+		  "Unaligned verity size");
       return FALSE;
     }
 
