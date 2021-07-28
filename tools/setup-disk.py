@@ -112,7 +112,7 @@ class Subvolume():
 
 subvolumes = [ Subvolume("root"), Subvolume("var", nocow = True), Subvolume("srv"),
                Subvolume("opt"), Subvolume("home"), Subvolume("usr"),
-               Subvolume("boot/writeable"),
+               Subvolume("boot/writable"),
                Subvolume("boot/grub2/i386-pc"), Subvolume("boot/grub2/x86_64-efi") ]
 
 for subvolume in subvolumes:
