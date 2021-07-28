@@ -367,11 +367,7 @@ create_images (const gchar *input, GError **gerror)
       return FALSE;
     }
 
-  char *libosrelease = g_strjoin ("/", tmpdir, "btrfs", "usr/lib/os-release", NULL);
-  // char *etcosrelease = g_strjoin ("/", tmpdir, "btrfs", "etc/os-release", NULL);
-
-  /* XXX if ((error = econf_readDirs (&os_release, libosrelease, etcosrelease,
-     "os-release", "", "=", "#"))) */
+  char *libosrelease = g_strjoin ("/", tmpdir, "btrfs", "lib/os-release", NULL);
   if ((error = econf_readFile (&os_release, libosrelease, "=", "#")))
     {
       fprintf (stderr, "ERROR: couldn't read os-release: %s\n",
@@ -427,17 +423,18 @@ create_images (const gchar *input, GError **gerror)
   /* Cleanup subvolumes */
   if (debug_flag)
     g_print("Cleanup of subvolumes...\n");
-  rm_dir_content("etc", tmpdir, gerror);
-  rm_dir_content("home", tmpdir, gerror);
-  rm_dir_content("root", tmpdir, gerror);
-  rm_dir_content("opt", tmpdir, gerror);
-  rm_dir_content("srv", tmpdir, gerror);
+  // rm_dir_content("etc", tmpdir, gerror);
+  // rm_dir_content("home", tmpdir, gerror);
+  // rm_dir_content("root", tmpdir, gerror);
+  // rm_dir_content("opt", tmpdir, gerror);
+  // rm_dir_content("srv", tmpdir, gerror);
   // XXX boot/grub2/*-pc/*, boot/grub2/*-efi/*
   rm_dir_content("boot/writable", tmpdir, gerror);
-  rm_dir_content("usr/local", tmpdir, gerror);
-  rm_dir_content("var", tmpdir, gerror);
-  rm_dir_content("run", tmpdir, gerror);
-  rm_dir_content("dev", tmpdir, gerror);
+  rm_dir_content("local", tmpdir, gerror);
+  g_rmdir("local");
+  //rm_dir_content("var", tmpdir, gerror);
+  //rm_dir_content("run", tmpdir, gerror);
+  //rm_dir_content("dev", tmpdir, gerror);
 
   gchar *pvers = g_strjoin("-", product_name, version_id, NULL);
   gchar *pvers_idx = g_strjoin(".", pvers, "caidx", NULL);
