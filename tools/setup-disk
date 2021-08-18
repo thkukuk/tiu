@@ -83,15 +83,9 @@ vfat = partition1.create_filesystem(FsType_VFAT)
 vfat.create_mount_point("/boot/efi")
 
 
-partition2 = create_partition(gpt, 1 * GiB)
-partition2.set_id(ID_SWAP)
-swap = partition2.create_filesystem(FsType_SWAP)
-swap.create_mount_point("swap")
-
-
-partition3 = create_partition(gpt, 8 * GiB)
-partition3.set_id(ID_LINUX)
-btrfs = to_btrfs(partition3.create_filesystem(FsType_BTRFS))
+partition2 = create_partition(gpt, 8 * GiB)
+partition2.set_id(ID_LINUX)
+btrfs = to_btrfs(partition2.create_filesystem(FsType_BTRFS))
 btrfs.create_mount_point("/")
 
 top_level = btrfs.get_top_level_btrfs_subvolume()
@@ -112,12 +106,16 @@ class Subvolume():
 
 subvolumes = [ Subvolume("root"), Subvolume("var", nocow = True), Subvolume("srv"),
                Subvolume("opt"), Subvolume("home"), Subvolume("usr"),
-               Subvolume("boot/writable"),
                Subvolume("boot/grub2/i386-pc"), Subvolume("boot/grub2/x86_64-efi") ]
+x_initrd_mount = [ "root", "usr" ]
 
 for subvolume in subvolumes:
     tmp = at_subvolume.create_btrfs_subvolume("@/" + subvolume.path)
-    tmp.create_mount_point("/" + subvolume.path)
+    mount_point = tmp.create_mount_point("/" + subvolume.path)
+    if subvolume.path in x_initrd_mount:
+        mount_options = mount_point.get_mount_options()
+        mount_options.append("x-initrd.mount")
+        mount_point.set_mount_options(mount_options)
     tmp.set_nocow(subvolume.nocow)
 
 

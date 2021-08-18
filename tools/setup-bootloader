@@ -1,0 +1,37 @@
+#!/bin/bash
+
+ROOTDIR=/mnt
+
+# We need some files outside /usr
+# boot is mostly kernel
+cp -av ${ROOTDIR}/usr/boot/* ${ROOTDIR}/boot/
+# /etc/grub.d contains scripts which belongs to /usr/libexec
+cp -av ${ROOTDIR}/usr/share/factory/etc/grub.d ${ROOTDIR}/etc/
+# Create input variables for grub.cfg
+mkdir -p ${ROOTDIR}/etc/default
+cp -av ${ROOTDIR}/usr/share/factory/etc/default/grub ${ROOTDIR}/etc/default/grub
+
+# update-alternatives, will be replaced with libalternatives
+cp -av ${ROOTDIR}/usr/share/factory/etc/alternatives ${ROOTDIR}/etc/
+
+# Mount /dev, /sys and /proc to be able to create initrd and
+# install bootloader
+mount --rbind /dev ${ROOTDIR}/dev
+mount --make-rslave ${ROOTDIR}/dev
+mount --rbind /sys ${ROOTDIR}/sys
+mount --make-rslave ${ROOTDIR}/sys
+mount --rbind /proc ${ROOTDIR}/proc
+mount --make-rslave ${ROOTDIR}/proc
+
+# We need the root account and systemd users in initramfs
+chroot ${ROOTDIR} systemd-sysusers system-user-root.conf
+chroot ${ROOTDIR} systemd-sysusers system-group-hardware.conf
+chroot ${ROOTDIR} systemd-sysusers systemd.conf
+chroot ${ROOTDIR} dracut
+
+sed -i -e 's|GRUB_CMDLINE_LINUX_DEFAULT=.*|GRUB_CMDLINE_LINUX_DEFAULT="rw quiet systemd.show_status=1 mitigations=auto \\$ignition_firstboot"|g' ${ROOTDIR}/etc/default/grub
+echo -e 'SUSE_BTRFS_SNAPSHOT_BOOTING="true"\nGRUB_DISABLE_OS_PROBER="true"' >> ${ROOTDIR}/etc/default/grub
+chroot ${ROOTDIR} sh -c "grub2-mkconfig > /boot/grub2/grub.cfg"
+#grub2-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=TIU /dev/vda
+chroot ${ROOTDIR} grub2-install /dev/vda
+

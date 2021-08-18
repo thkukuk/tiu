@@ -107,5 +107,10 @@ tiu = executable(
   install : true,
 )
 
+install_data(
+  'tools/setup-disk',
+  install_dir : join_paths(get_option('libexecdir'), 'tiu'),
+)
+
 # Unit tests
 #subdir('tests')
