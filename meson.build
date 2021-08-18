@@ -107,8 +107,14 @@ tiu = executable(
   install : true,
 )
 
-install_data(
+tools = files(
   'tools/setup-disk',
+  'tools/setup-root',
+  'tools/setup-bootloader',
+)
+
+install_data(
+  tools,
   install_dir : join_paths(get_option('libexecdir'), 'tiu'),
 )
 
