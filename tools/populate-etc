@@ -1,0 +1,28 @@
+#!/bin/bash
+
+set -e
+
+ROOTDIR=/mnt
+
+# update-alternatives, will be replaced with libalternatives
+cp -av ${ROOTDIR}/usr/share/factory/etc/alternatives ${ROOTDIR}/etc/
+
+# We need the root account and systemd users in initramfs
+chroot ${ROOTDIR} systemd-sysusers system-user-root.conf
+chroot ${ROOTDIR} systemd-sysusers system-group-hardware.conf
+chroot ${ROOTDIR} systemd-sysusers systemd.conf
+
+# copy snapper configs
+cp -av ${ROOTDIR}/usr/share/factory/etc/snapper ${ROOTDIR}/etc/
+sed -e 's|/mnt/usr|/usr|g' /etc/snapper/configs/usr > ${ROOTDIR}/etc/snapper/configs/usr
+cp -a ${ROOTDIR}/usr/share/fillup-templates/sysconfig.snapper ${ROOTDIR}/etc/sysconfig/snapper
+sed -i -e 's|SNAPPER_CONFIGS=.*|SNAPPER_CONFIGS="root usr"|g' ${ROOTDIR}/etc/sysconfig/snapper
+
+# bsc#1183407 / wrong wicked locations
+mkdir -p ${ROOTDIR}/etc/dbus-1/system.d/
+cp -a ${ROOTDIR}/usr/share/factory/etc/dbus-1/system.d/* ${ROOTDIR}/etc/dbus-1/system.d/
+cp -a ${ROOTDIR}/usr/share/factory/etc/wicked ${ROOTDIR}/etc
+
+# aaa_base, should be done via tmpfiles.d
+cp -a ${ROOTDIR}/usr/share/factory/etc/{bash.bashrc,profile} ${ROOTDIR}/etc/
+

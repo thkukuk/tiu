@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 ROOTDIR=/mnt
 
 # Create compat symlinks because of usrMove
