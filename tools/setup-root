@@ -17,3 +17,17 @@ mkdir -p ${ROOTDIR}/var/tmp
 echo "LANG=en_US.UTF-8" > ${ROOTDIR}/etc/locale.conf
 ln -sf /usr/share/zoneinfo/UTC ${ROOTDIR}/etc/localtime
 
+# lo network config
+mkdir -p ${ROOTDIR}/etc/sysconfig/network
+echo << EOT >> ${ROOTDIR}/etc/sysconfig/network/ifcfg-lo
+# Loopback (lo) configuration
+IPADDR=127.0.0.1/8
+NETMASK=255.0.0.0
+NETWORK=127.0.0.0
+STARTMODE=nfsroot
+BOOTPROTO=static
+USERCONTROL=no
+FIREWALL=no
+EOT
+chmod 600 ${ROOTDIR}/etc/sysconfig/network/ifcfg-lo
+
