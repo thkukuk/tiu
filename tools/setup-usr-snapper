@@ -1,0 +1,13 @@
+#!/bin/bash
+
+set -e
+
+ROOTDIR=/mnt
+
+ROOTDEV=`awk '!/^#/ && ($2 == "/usr") { print $1 }' ${ROOTDIR}/etc/fstab`
+snapper -c usr create-config ${ROOTDIR}/usr
+snapper -c usr create
+umount ${ROOTDIR}/usr
+mount -o subvol=/@/usr/.snapshots/1/snapshot ${ROOTDEV} ${ROOTDIR}/usr
+btrfs property set ${ROOTDIR}/usr/ ro false
+sed -i -e 's|subvol=/@/usr|subvol=/@/usr/.snapshots/1/snapshot|g' ${ROOTDIR}/etc/fstab
