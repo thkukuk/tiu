@@ -315,6 +315,7 @@ create_images (const gchar *input, GError **gerror)
   econf_file *os_release = NULL;
   econf_err error;
   g_autofree gchar *lf = NULL;
+  GError *ierror = NULL;
 
   if (debug_flag)
     g_printf("Start creating tiu update images from '%s'...\n",
@@ -324,8 +325,6 @@ create_images (const gchar *input, GError **gerror)
 
   if (is_remote_scheme(scheme))
     {
-      GError *ierror = NULL;
-
       lf = g_build_filename(cachedir, "input", NULL);
 
       if (g_mkdir_with_parents(cachedir, 0700) != 0)
@@ -361,8 +360,9 @@ create_images (const gchar *input, GError **gerror)
       lf = g_strdup(input);
     }
 
-  if (!workdir_setup (lf, &tmpdir, NULL))
+  if (!workdir_setup (lf, &tmpdir, &ierror))
     {
+      g_propagate_error(gerror, ierror);
       cleanup (tmpdir);
       return FALSE;
     }
@@ -423,18 +423,8 @@ create_images (const gchar *input, GError **gerror)
   /* Cleanup subvolumes */
   if (debug_flag)
     g_print("Cleanup of subvolumes...\n");
-  // rm_dir_content("etc", tmpdir, gerror);
-  // rm_dir_content("home", tmpdir, gerror);
-  // rm_dir_content("root", tmpdir, gerror);
-  // rm_dir_content("opt", tmpdir, gerror);
-  // rm_dir_content("srv", tmpdir, gerror);
-  // XXX boot/grub2/*-pc/*, boot/grub2/*-efi/*
   rm_dir_content("boot/writable", tmpdir, gerror);
-  rm_dir_content("local", tmpdir, gerror);
-  g_rmdir("local");
-  //rm_dir_content("var", tmpdir, gerror);
-  //rm_dir_content("run", tmpdir, gerror);
-  //rm_dir_content("dev", tmpdir, gerror);
+  rm_dir_content("usr/local", tmpdir, gerror);
 
   gchar *pvers = g_strjoin("-", product_name, version_id, NULL);
   gchar *pvers_idx = g_strjoin(".", pvers, "caidx", NULL);
