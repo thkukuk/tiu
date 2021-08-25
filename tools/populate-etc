@@ -18,6 +18,33 @@ sed -e 's|/mnt/usr|/usr|g' /etc/snapper/configs/usr > ${ROOTDIR}/etc/snapper/con
 cp -a ${ROOTDIR}/usr/share/fillup-templates/sysconfig.snapper ${ROOTDIR}/etc/sysconfig/snapper
 sed -i -e 's|SNAPPER_CONFIGS=.*|SNAPPER_CONFIGS="root usr"|g' ${ROOTDIR}/etc/sysconfig/snapper
 
+# configure locale and timezone
+echo "LANG=en_US.UTF-8" > ${ROOTDIR}/etc/locale.conf
+ln -sf /usr/share/zoneinfo/UTC ${ROOTDIR}/etc/localtime
+# Systemd controls the console font now
+echo FONT="eurlatgr.psfu" >> /etc/vconsole.conf
+
+# lo network config
+mkdir -p ${ROOTDIR}/etc/sysconfig/network
+echo << EOT > ${ROOTDIR}/etc/sysconfig/network/ifcfg-lo
+# Loopback (lo) configuration
+IPADDR=127.0.0.1/8
+NETMASK=255.0.0.0
+NETWORK=127.0.0.0
+STARTMODE=nfsroot
+BOOTPROTO=static
+USERCONTROL=no
+FIREWALL=no
+EOT
+chmod 600 ${ROOTDIR}/etc/sysconfig/network/ifcfg-lo
+
+# Enable DHCP on eth0
+echo << EOT > ${ROOTDIR}/etc/sysconfig/network/ifcfg-eth0
+BOOTPROTO='dhcp'
+STARTMODE='auto'
+EOT
+chmod 600 ${ROOTDIR}/etc/sysconfig/network/ifcfg-eth0
+
 # bsc#1183407 / wrong wicked locations
 mkdir -p ${ROOTDIR}/etc/dbus-1/system.d/
 cp -a ${ROOTDIR}/usr/share/factory/etc/dbus-1/system.d/* ${ROOTDIR}/etc/dbus-1/system.d/
