@@ -15,7 +15,6 @@ create_btrfs_subvolume (const gchar *subvolume, GError **error)
   g_ptr_array_add(args, g_strdup("subvolume"));
   g_ptr_array_add(args, g_strdup("create"));
   g_ptr_array_add(args, g_strdup(subvolume));
-
   g_ptr_array_add(args, NULL);
 
   sproc = g_subprocess_newv((const gchar * const *)args->pdata,
@@ -47,7 +46,6 @@ delete_btrfs_subvolume (const gchar *subvolume, GError **error)
   g_ptr_array_add(args, g_strdup("subvolume"));
   g_ptr_array_add(args, g_strdup("delete"));
   g_ptr_array_add(args, g_strdup(subvolume));
-
   g_ptr_array_add(args, NULL);
 
   sproc = g_subprocess_newv((const gchar * const *)args->pdata,
@@ -127,7 +125,6 @@ workdir_setup (const gchar *contentpath, const gchar **workdir, GError **error)
   g_ptr_array_add(tar_args, g_strdup(contentpath));
   g_ptr_array_add(tar_args, g_strdup("-C"));
   g_ptr_array_add(tar_args, g_strdup(tardir));
-
   g_ptr_array_add(tar_args, NULL);
 
   sproc = g_subprocess_newv((const gchar * const *)tar_args->pdata,
@@ -151,6 +148,7 @@ workdir_setup (const gchar *contentpath, const gchar **workdir, GError **error)
   g_ptr_array_add(mv_args, g_strdup("/bin/sh"));
   g_ptr_array_add(mv_args, g_strdup("-c"));
   g_ptr_array_add(mv_args, g_strdup(mv_cmd));
+  g_ptr_array_add(mv_args, NULL);
 
   sproc = g_subprocess_newv((const gchar * const *)mv_args->pdata,
 			    G_SUBPROCESS_FLAGS_STDOUT_SILENCE, &ierror);
@@ -175,6 +173,7 @@ workdir_setup (const gchar *contentpath, const gchar **workdir, GError **error)
   g_ptr_array_add(mv_args, g_strdup("/bin/sh"));
   g_ptr_array_add(mv_args, g_strdup("-c"));
   g_ptr_array_add(mv_args, g_strdup(mv_cmd));
+  g_ptr_array_add(mv_args, NULL);
 
   sproc = g_subprocess_newv((const gchar * const *)mv_args->pdata,
 			    G_SUBPROCESS_FLAGS_STDOUT_SILENCE, &ierror);
@@ -199,6 +198,7 @@ workdir_setup (const gchar *contentpath, const gchar **workdir, GError **error)
   g_ptr_array_add(mv_args, g_strdup("/bin/sh"));
   g_ptr_array_add(mv_args, g_strdup("-c"));
   g_ptr_array_add(mv_args, g_strdup(mv_cmd));
+  g_ptr_array_add(mv_args, NULL);
 
   sproc = g_subprocess_newv((const gchar * const *)mv_args->pdata,
 			    G_SUBPROCESS_FLAGS_STDOUT_SILENCE, &ierror);
