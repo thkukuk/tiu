@@ -12,6 +12,8 @@ chroot ${ROOTDIR} systemd-sysusers system-user-root.conf
 chroot ${ROOTDIR} systemd-sysusers system-group-hardware.conf
 chroot ${ROOTDIR} systemd-sysusers systemd.conf
 
+mkdir -p ${ROOTDIR}/etc/sysconfig
+
 # copy snapper configs
 cp -av ${ROOTDIR}/usr/share/factory/etc/snapper ${ROOTDIR}/etc/
 sed -e 's|/mnt/usr|/usr|g' /etc/snapper/configs/usr > ${ROOTDIR}/etc/snapper/configs/usr
