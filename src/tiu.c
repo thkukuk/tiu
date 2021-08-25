@@ -19,6 +19,14 @@ static GOptionEntry entries_extract[] = {
 };
 static GOptionGroup *extract_group;
 
+static gchar *device = NULL;
+static GOptionEntry entries_install[] = {
+  {"archive", 'a', 0, G_OPTION_ARG_FILENAME, &squashfs_file, "tiu archive", "FILENAME"},
+  {"device", 'd', 0, G_OPTION_ARG_FILENAME, &device, "installation device", "DEVICE"},
+  {0}
+};
+static GOptionGroup *install_group;
+
 static void
 init_group_options (void)
 {
@@ -29,6 +37,10 @@ init_group_options (void)
   create_group = g_option_group_new("create", "Create options:",
 				    "Show help options for create", NULL, NULL);
   g_option_group_add_entries(create_group, entries_create);
+
+  install_group = g_option_group_new("install", "Installation options:",
+				    "Show help options for install", NULL, NULL);
+  g_option_group_add_entries(install_group, entries_install);
 }
 
 int
@@ -38,7 +50,7 @@ main(int argc, char **argv)
   g_autoptr(GOptionContext) context = NULL;
   GError *error = NULL;
   GOptionEntry options[] = {
-    {"debug", 'd', 0, G_OPTION_ARG_NONE, &debug_flag, "enable debug output", NULL},
+    {"debug", '\0', 0, G_OPTION_ARG_NONE, &debug_flag, "enable debug output", NULL},
     {"version", '\0', 0, G_OPTION_ARG_NONE, &version, "display version", NULL},
     {"help", 'h', 0, G_OPTION_ARG_NONE, &help, NULL, NULL},
     {0}
@@ -54,9 +66,11 @@ main(int argc, char **argv)
   g_option_context_set_description (context, "List of tiu commands:\n"
 				    "  extract\tExtract a tiu archive\n"
 				    "  create\tCreate a tiu update file\n"
+				    "  install\tInstall a new system\n"
 				    );
   g_option_context_add_group (context, extract_group);
   g_option_context_add_group (context, create_group);
+  g_option_context_add_group (context, install_group);
 
   if (!g_option_context_parse(context, &argc, &argv, &error))
     {
@@ -128,6 +142,32 @@ main(int argc, char **argv)
 	    }
 	  else
 	    g_fprintf (stderr, "ERROR: extracting the archive failed!\n");
+	  exit (1);
+	}
+    }
+  else if (strcmp (argv[1], "install") == 0)
+    {
+      if (squashfs_file == NULL)
+	{
+	  fprintf (stderr, "ERROR: no tiu archive as input specified!\n");
+	  exit (1);
+	}
+
+      if (device == NULL)
+	{
+	  fprintf (stderr, "ERROR: no device for installation specified!\n");
+	  exit (1);
+	}
+
+      if (!install_system (squashfs_file, device, &error))
+	{
+	  if (error)
+	    {
+	      g_fprintf (stderr, "ERROR: %s\n", error->message);
+	      g_clear_error (&error);
+	    }
+	  else
+	    g_fprintf (stderr, "ERROR: installation of the archive failed!\n");
 	  exit (1);
 	}
     }
