@@ -65,10 +65,6 @@ main(int argc, char **argv)
       exit (1);
     }
 
-  if (debug_flag)
-    {
-      /* Not yet implemented */
-    }
   if (version)
     g_print("TIU - Transactional Image Update Version %s\n", "0.1");
 
