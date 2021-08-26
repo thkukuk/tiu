@@ -73,7 +73,7 @@ extract_tiu_image(const gchar *tiuname, const gchar *outputdir,
     return FALSE;
 
   if (debug_flag)
-    g_printf("input tiu archive: %s\n", tiulocation);
+    g_printf("Input tiu archive: %s\n", tiulocation);
 
   if (!check_tiu_archive(tiulocation, &bundle, &ierror))
     {

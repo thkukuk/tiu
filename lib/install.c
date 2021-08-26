@@ -11,6 +11,10 @@ exec_script (const gchar *script, const gchar *device, GError **error)
   GError *ierror = NULL;
   GPtrArray *args = g_ptr_array_new_full(8, g_free);
 
+  if (debug_flag)
+    g_printf("Running script '%s' for device '%s'...\n",
+	     script, device);
+
   g_ptr_array_add(args, g_strdup(script));
   g_ptr_array_add(args, "-d");
   g_ptr_array_add(args, g_strdup(device));

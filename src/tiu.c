@@ -171,6 +171,11 @@ main(int argc, char **argv)
 	  exit (1);
 	}
     }
+  else
+    {
+      g_fprintf (stderr, "ERROR: no argument given!\n");
+      exit (1);
+    }
 
   return 0;
 }
