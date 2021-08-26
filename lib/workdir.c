@@ -142,32 +142,8 @@ workdir_setup (const gchar *contentpath, const gchar **workdir, GError **error)
     }
   g_ptr_array_free(tar_args, TRUE);
 
-  /* Move /boot to /usr/boot */
-  mv_cmd = g_strjoin(NULL, "mv ", tardir, "/boot ", tardir, "/usr/", NULL);
-
-  g_ptr_array_add(mv_args, g_strdup("/bin/sh"));
-  g_ptr_array_add(mv_args, g_strdup("-c"));
-  g_ptr_array_add(mv_args, g_strdup(mv_cmd));
-  g_ptr_array_add(mv_args, NULL);
-
-  sproc = g_subprocess_newv((const gchar * const *)mv_args->pdata,
-			    G_SUBPROCESS_FLAGS_STDOUT_SILENCE, &ierror);
-  if (sproc == NULL)
-    {
-      g_propagate_prefixed_error(error, ierror, "Failed to start mv: ");
-      return FALSE; /* XXX cleanup */
-    }
-
-  if (!g_subprocess_wait_check(sproc, NULL, &ierror))
-    {
-      g_propagate_prefixed_error(error, ierror, "Failed to move usr directory: ");
-      return FALSE; /* XXX cleanup */
-    }
-
-  g_ptr_array_free(mv_args, TRUE);
-  mv_args = g_ptr_array_new_full(5, g_free);
-
   /* Move /etc to /usr/share/factory/etc */
+  mv_args = g_ptr_array_new_full(5, g_free);
   mv_cmd = g_strjoin(NULL, "mv ", tardir, "/etc ", tardir, "/usr/share/factory/etc", NULL);
 
   g_ptr_array_add(mv_args, g_strdup("/bin/sh"));
