@@ -4,9 +4,34 @@ set -e
 
 ROOTDIR=/mnt
 
+device=
+while getopts d: arg
+do
+    case $arg in
+	d)
+	    device="$OPTARG"
+	    ;;
+	?)
+	    printf "Usage: %s: -d device\n" "$0"
+            exit 2
+	    ;;
+    esac
+done
+
+if [ -z "$device" ]; then
+    printf "Usage: %s: -d device\n" "$0"
+    exit 2
+fi
+
+# Install the kernel
+for i in "${ROOTDIR}"/usr/lib/modules/* ; do
+    KVER=$(basename "$i")
+    for f in .vmlinuz.hmac System.map sysctl.conf vmlinuz; do
+        cp -a "${ROOTDIR}/usr/lib/modules/$KVER/$f" "${ROOTDIR}/boot/$f-$KVER"
+    done
+done
+
 # We need some files outside /usr
-# boot is mostly kernel
-cp -av ${ROOTDIR}/usr/boot/* ${ROOTDIR}/boot/
 # /etc/grub.d contains scripts which belongs to /usr/libexec
 cp -av ${ROOTDIR}/usr/share/factory/etc/grub.d ${ROOTDIR}/etc/
 # Create input variables for grub.cfg
@@ -28,5 +53,4 @@ sed -i -e 's|GRUB_CMDLINE_LINUX_DEFAULT=.*|GRUB_CMDLINE_LINUX_DEFAULT="rw quiet 
 echo -e 'SUSE_BTRFS_SNAPSHOT_BOOTING="true"\nGRUB_DISABLE_OS_PROBER="true"' >> ${ROOTDIR}/etc/default/grub
 chroot ${ROOTDIR} sh -c "grub2-mkconfig > /boot/grub2/grub.cfg"
 #grub2-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=TIU /dev/vda
-chroot ${ROOTDIR} grub2-install /dev/vda
-
+chroot ${ROOTDIR} grub2-install "${device}"
