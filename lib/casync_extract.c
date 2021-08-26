@@ -34,15 +34,18 @@ casync_extract(const gchar *input, const gchar *dest, const gchar *store,
   g_ptr_array_add(args, g_strdup(dest));
   g_ptr_array_add(args, NULL);
 
-  launcher = g_subprocess_launcher_new(G_SUBPROCESS_FLAGS_NONE);
 #if 0 /* XXX */
+  launcher = g_subprocess_launcher_new(G_SUBPROCESS_FLAGS_NONE);
   if (tmpdir)
     g_subprocess_launcher_setenv(launcher, "TMPDIR", tmpdir, TRUE);
-#endif
 
   sproc = g_subprocess_launcher_spawnv(launcher,
 				       (const gchar * const *)args->pdata,
 				       &ierror);
+#else
+  sproc = g_subprocess_newv((const gchar * const *)args->pdata,
+			    G_SUBPROCESS_FLAGS_STDOUT_SILENCE, &ierror);
+#endif
   if (sproc == NULL)
     {
       g_propagate_prefixed_error(error, ierror,
