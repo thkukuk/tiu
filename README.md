@@ -68,6 +68,15 @@ archives:
 # tiu create --tar system-update.tar.xz
 ```
 
+This will try to create a `btrfs` subvolume in _$TMPDIR_.  If this
+directory is not under a `btrfs` filesystem `tiu` will complain with
+"ERROR: not a btrfs filesystem: /tmp/tiu-workdir-XXXXXXXXXX" message.
+The solution is execute it with a different default directory.
+
+```
+# TMPDIR=/var/cache/tiu tiu create --tar system-update.tar.xz
+```
+
 ### Extracting tiu archive
 
 ```

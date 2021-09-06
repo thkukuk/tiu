@@ -10,6 +10,7 @@ project('tiu', 'c',
 		'prefix=/usr',
 		'sysconfdir=/etc',
 		'localstatedir=/var',
+		'werror=true',
 	],
 	meson_version : '>= 0.49.0',
 )
@@ -23,7 +24,6 @@ add_project_arguments(['-D_GNU_SOURCE=1',
 		       '-D_FORTIFY_SOURCE=2'], language : 'c')
 
 possible_cc_flags = [
-		  '-Werror',
 		  '-fstack-protector-strong',
 		  '-funwind-tables',
 		  '-fasynchronous-unwind-tables',
