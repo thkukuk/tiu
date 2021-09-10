@@ -420,11 +420,11 @@ create_images (const gchar *input, GError **gerror)
     }
 
   /* Create required directories */
-  gchar *dir = g_strjoin("/", tmpdir, "btrfs", "usr/.snapshots", NULL);
+  gchar *dir = g_strjoin("/", tmpdir, "btrfs", ".snapshots", NULL);
   if (g_mkdir(dir, 0750) != 0)
     {
       g_set_error(gerror, G_FILE_ERROR, G_FILE_ERROR_FAILED,
-                  "Failed creating directory '%s'", dir);
+                  "Failed creating directory '%s' (%m)", dir);
       return FALSE;
     }
 
