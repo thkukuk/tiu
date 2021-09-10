@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "tiu.h"
 #include "network.h"
 
 gboolean
@@ -99,7 +100,8 @@ static gboolean transfer(RaucTransfer *xfer, GError **error)
 		goto out;
 	}
 
-	curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+	if (debug_flag)
+	    curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
 	curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L); /* avoid signals for threading */
 	curl_easy_setopt(curl, CURLOPT_URL, xfer->url);
 	curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
