@@ -1,5 +1,6 @@
 
 #include <stdio.h>
+#include <errno.h>
 #include <libeconf.h>
 #include <glib/gprintf.h>
 #include <gio/gfiledescriptorbased.h>
@@ -424,7 +425,7 @@ create_images (const gchar *input, GError **gerror)
   if (g_mkdir(dir, 0750) != 0)
     {
       g_set_error(gerror, G_FILE_ERROR, G_FILE_ERROR_FAILED,
-                  "Failed creating directory '%s' (%m)", dir);
+                  "Failed creating directory '%s' (%s)", dir, strerror(errno));
       return FALSE;
     }
 
