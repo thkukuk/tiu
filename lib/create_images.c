@@ -419,6 +419,13 @@ create_images (const gchar *input, GError **gerror)
       return FALSE;
     }
 
+  /* Create required directories */
+  if (g_mkdir("usr/.snapshots", 0750) != 0)
+    {
+      g_set_error(gerror, G_FILE_ERROR, G_FILE_ERROR_FAILED,
+                  "Failed creating directory 'usr/.snapshots'");
+      return FALSE;
+    }
 
   /* Cleanup subvolumes */
   if (debug_flag)
