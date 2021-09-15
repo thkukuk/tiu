@@ -1,5 +1,211 @@
 #!/usr/bin/python3
 
+"""CLI too for disk partitioning.
+
+"setup-disk" is a small CLI tool for disk partitioning, with a backend
+based on libstorage-ng.
+
+To partition a single device we can do:
+  setup-disk -d /dev/sda
+
+Internally "setup-disk" have a default layout for a MicroOS
+installation, where three partitions are created to allocate the EFI
+payload (installed by Grub in a different stage), sysroot as a BtrFS
+with different subvolumes, and a "/var" partition with a "nodatacow"
+mount option.
+
+This default layout is parameterized for a "DEVICE1" name, that is
+provided by the "--device" or "-d" command line parameter.
+
+
+User defined layouts
+--------------------
+
+The user can provide their own partition layouts in YAML format, using
+the parameter "--layout":
+  setup_disk -l my_layout.yml
+
+Internally the layout can have some Python template variables, with
+the format "${DEVICEx}" for devices and "${DEVICEx_Py}" for
+partitions.  The user can indicate multiple devices via CLI repeating
+the "--device" parameter in order.
+
+For example:
+  setup_disk -d /dev/sda -d /dev/sdb -l my_layout.yml
+
+This will replace "${DEVICE1}" with "/dev/sda" and "${DEVICE2}" with
+"/dev/sdb", the different partitions are later calculated and replaced
+in the template.  So "${DEVICE1_P1}" will be replaced by "/dev/sda1".
+
+
+Layout reference
+----------------
+
+"partitions" section
+====================
+
+"setup-disk" separate partitioning the devices from providing a file
+system, creating volumes or building arrays of disks (WIP). The
+advantage of this is that this, usually, compose better that other
+approaches, and makes more easy adding more options that needs to work
+correctly with the rest of the system.
+
+* "config": Dictionary. Optional.
+
+  Subsection that store some configuration options related with the
+  partitioner.
+
+  * "label": String. Optional. Default: "gpt"
+
+    Default label for the partitions of the devices. The possible
+    values can be "gpt", "msdos" or "dos". For UEFI systems, we need
+    to set it to "gpt". This value will be used for all the devices if
+    is not overwritten.
+
+* `devices`: Dictionary.
+
+  List of devices that will be partitioned. We can indicate already
+  present devices, like "/dev/sda" or "/dev/hda", or we can use Python
+  template variables like "${DEVICE1}". We can use any valid device
+  name in Linux such as all the `/dev/disk/by-id/...`,
+  `/dev/disk/by-label/...`, `/dev/disk/by-uuid/...` and others.
+
+  For each device we have:
+
+  * "label": String. Optional. Default: "gpt"
+
+    Partition label for the device. The meaning and the possible
+    values are identical for "label" in the "config" section.
+
+  * "partitions": Array. Optional.
+
+    Partitions inside a device are described with an array. Each
+    element of the array is a dictionary that describe a single
+    partition.
+
+    * "number": Integer. Optional. Default: "index"
+
+      Expected partition number. Eventually this parameter will be
+      really optional, when the partitioner can deduce it from other
+      parameters. Today is better to be explicit in the partition
+      number, as this will guarantee that the partition is found in
+      the hard disk if present. If is not set, number will be the
+      current index position in the array.
+
+    * "size": Float or String.
+
+      Size of the partition expressed in IEC units. All the units
+      needs to match for partitions on the same device.
+
+      The last partition can use the string "rest" to indicate that
+      this partition will use all the free space available.
+
+    * "type": String.
+
+      A string that indicate for what this partition will be
+      used. "setup-disk" recognize several types:
+
+      * "swap": This partition will be used for SWAP.
+      * "linux": Partition used to root, home or any data.
+      * "boot": Small partition used for GRUB when in BIOS and "gpt".
+      * "efi": EFI partition used by GRUB when UEFI.
+      * "lvm": Partition used to build an LVM physical volume.
+      * "raid": Partition that will be a component of an array.
+
+Example:
+
+---
+partitions:
+  config:
+    label: gpt
+  devices:
+    /dev/sda:
+      partitions:
+        - number: 1
+          size: 512MiB
+          type: efi
+        - number: 2
+          size: 8GiB
+          type: linux
+        - number: 3
+          size: rest
+          type: linux
+
+
+"filesystems" section
+=====================
+
+The partitions created in previous sections usually requires a file
+system. This section will simply list the device name (or a Python
+template variable) and the file system (and properties) that will be
+applied to it.
+
+* "filesystem". String.
+
+  File system to apply in the device. Valid values are "reiserfs",
+  "ext{2,3,4}", "btrfs", "vfat", "xfs", "jfs", "ntfs", "swap", "nfs",
+  "tmpfs", "iso9660", "udf", "f2fs" "exfat" or "bitlocker".
+
+* "mountpoint". String.
+
+  Mount point where the device will be registered in "fstab".
+
+* "mount_options". Array. Optional.
+
+  Array of mount options for the partition.
+
+* "subvolumes". Dictionary.
+
+  For "btrfs" file systems we can specify more details.
+
+  * "prefix". String. Optional. Default: "@"
+
+    "btrfs" sub-volume name where the rest of the sub-volumes will be
+    under. For example, if we set "prefix" as "@" and we create a
+    sub-volume named "var", "setup-disk" will create it as "@/var".
+
+  * "subvolume". Dictionary.
+
+    * "path". String.
+
+      Path name for the sub-volume.
+
+	* "copy_on_write". Boolean. Optional. Default: "yes"
+
+      Value for the copy-on-write option in "btrfs".
+
+    * "mount_options". Array. Optional.
+
+      Array of mount options for the partition.
+
+Example:
+
+---
+filesystems:
+  /dev/sda1:
+    filesystem: vfat
+    mountpoint: /boot/efi
+  /dev/sda2:
+    filesystem: btrfs
+    mountpoint: /
+    subvolumes:
+      prefix: '@'
+      subvolume:
+        - path: root
+          mount_options: ['x-initrd.mount']
+        - path: var
+          copy_on_write: no
+        - path: srv
+        - path: opt
+        - path: home
+        - path: usr
+          mount_options: ['x-initrd.mount']
+        - path: boot/grub2/i386-pc
+        - path: boot/grub2/x86_64-efi
+
+"""
+
+
 import argparse
 import re
 import string
