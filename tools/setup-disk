@@ -1,36 +1,156 @@
 #!/usr/bin/python3
 
+import argparse
+import re
+import string
 
-# Adding the sys path is needed with the standard opensuse
-# inst-sys. libstorage-ng-python3 must also be added e.g. via a dud.
-import sys, getopt
-#sys.path += ["/usr/lib64/python3.8/site-packages"]
+import storage
+import yaml
 
-from storage import *
+# Write the logs in "/var/log/libstorage.log"
+storage.set_logger(storage.get_logfile_logger())
 
 
-def find_disk(staging, device):
+DEFAULT_LAYOUT = """
+---
+partitions:
+  config:
+    label: gpt
+  devices:
+    ${DEVICE1}:
+      partitions:
+        - number: 1
+          size: 512MiB
+          type: efi
+        - number: 2
+          size: 8GiB
+          type: linux
+        - number: 3
+          size: rest
+          type: linux
 
-    disk = Disk.find_by_name(staging, device)
+filesystems:
+  ${DEVICE1_P1}:
+    filesystem: vfat
+    mountpoint: /boot/efi
+  ${DEVICE1_P2}:
+    filesystem: btrfs
+    mountpoint: /
+    subvolumes:
+      prefix: '@'
+      subvolume:
+        - path: root
+          mount_options: ['x-initrd.mount']
+        - path: srv
+        - path: opt
+        - path: home
+        - path: usr
+          mount_options: ['x-initrd.mount']
+        - path: boot/grub2/i386-pc
+        - path: boot/grub2/x86_64-efi
+  ${DEVICE1_P3}:
+    filesystem: btrfs
+    mountpoint: /var
+    mount_options: ['nodatacow']
+"""
+
+
+class MyCommitCallbacks(storage.CommitCallbacks):
+    def message(self, message):
+        print(f"message '{message}'")
+
+    def error(self, message, what):
+        print(f"error '{message}' '{what}'")
+        return False
+
+
+def _resolve_devices(devices, layout):
+    """Resolve device and partition names in a template."""
+
+    # Create an environment where to find the devices and deduce
+    # partition names
+    environment = storage.Environment(True)
+    strge = storage.Storage(environment)
+    strge.probe()
+    probed = strge.get_probed()
+
+    mapping = {}
+    for index, device in enumerate(devices, start=1):
+        partitionable = storage.Partitionable.find_by_name(probed, device)
+        mapping[f"DEVICE{index}"] = device
+        # TODO - Better range criteria!
+        mapping.update(
+            {
+                f"DEVICE{index}_P{i}": partitionable.partition_name(i)
+                for i in range(1, 16)
+            }
+        )
+
+    try:
+        layout = string.Template(layout).substitute(mapping)
+    except KeyError as e:
+        raise Exception(f"Device {e} cannot be mapped in the layout")
+
+    return layout
+
+
+def _size(size):
+    """Parse a string that represent a size"""
+    units = {
+        "B": storage.B,
+        "KiB": storage.KiB,
+        "MiB": storage.MiB,
+        "GiB": storage.GiB,
+        "TiB": storage.TiB,
+        "PiB": storage.PiB,
+        "EiB": storage.EiB,
+    }
+
+    if size == "rest":
+        return 0
+
+    match = re.match(r"(\d+)\s*(\w+)", size)
+    if not match:
+        raise Exception(f"Size {size} not recognized")
+
+    size, unit = match.groups()
+    unit = "B" if not unit else unit
+    if unit not in units:
+        raise Exception(f"Unit {unit} not recognized")
+
+    return int(size) * units[unit]
+
+
+def _prepare_disk(devicegraph, name):
+    """Search for a disk in a device map and clean the partitions."""
+    # TODO check for thing that cannot be deleted, e.g. multipath
+    disk = storage.Disk.find_by_name(devicegraph, name)
     if not disk:
-        raise Exception("Error: disk /dev/vda not found!")
+        raise Exception(f"Device {name} not found!")
 
+    disk.remove_descendants()
     return disk
 
-#    disks = Disk.get_all(staging)
-#
-#    if not disks:
-#        raise Exception("no disks found")
-#
-#    # TODO check for thing that cannot be deleted, e.g. multipath
-#
-#    return disks[0]
+
+def _partition_table(disk, label):
+    """Generate a partition table"""
+    labels = {
+        "msdos": (storage.PtType_MSDOS, storage.to_msdos),
+        "dos": (storage.PtType_MSDOS, storage.to_msdos),
+        "gpt": (storage.PtType_GPT, storage.to_gpt),
+    }
+
+    if label not in labels:
+        raise Exception(f"Partition label {label} not recognized")
+
+    part_type, convert = labels[label]
+    part_table = convert(disk.create_partition_table(part_type))
+    return part_table
 
 
-def create_partition(gpt, size):
-
-    for slot in gpt.get_unused_partition_slots():
-
+def _create_partition(table, size):
+    """Create a partition in a partition table."""
+    for slot in table.get_unused_partition_slots():
         if not slot.primary_possible:
             continue
 
@@ -39,109 +159,193 @@ def create_partition(gpt, size):
         if region.to_bytes(region.get_length()) < size:
             continue
 
-        region.set_length(int(size / region.get_block_size()))
-        region = gpt.align(region)
-        partition = gpt.create_partition(slot.name, region, PartitionType_PRIMARY)
+        # If size if zero, we allocate the full region
+        if size:
+            region.set_length(int(size / region.get_block_size()))
+        region = table.align(region)
+        partition = table.create_partition(
+            slot.name, region, storage.PartitionType_PRIMARY
+        )
         return partition
 
-    raise Exception("no suitable partition slot found")
+    raise Exception("No suitable partition slot found!")
 
 
-class MyCommitCallbacks(CommitCallbacks):
+def _partition(disk, label, partitions):
+    """Partition a disk following a layout."""
+    ids = {
+        "swap": [storage.ID_SWAP],
+        "linux": [storage.ID_LINUX],
+        "lvm": [storage.ID_LVM],
+        "raid": [storage.ID_RAID],
+        "efi": [storage.ID_BIOS_BOOT, storage.ID_ESP],
+        "boot": [storage.ID_BIOS_BOOT],
+    }
 
-    def __init__(self):
-        super(MyCommitCallbacks, self).__init__()
+    table = _partition_table(disk, label)
 
-    def message(self, message):
-        print("message '%s'" % message)
+    for index, partition in enumerate(partitions, start=1):
+        number = partition.get("number", index)
+        if index != number:
+            raise Exception(f"Expected partition number {number} instead of {index}")
 
-    def error(self, message, what):
-        print("error '%s' '%s'" % (message, what))
-        return False
+        if "size" not in partition:
+            raise Exception(f"Partition {number} has missing 'size'")
+        part = _create_partition(table, _size(partition["size"]))
 
+        type_ = partition.get("type", "linux")
+        if type_ not in ids:
+            raise Exception(f"Type {type_} not valid for partition {number}")
 
-set_logger(get_logfile_logger())
-
-try:
-    opts, args = getopt.getopt(sys.argv[1:],"hd:",["device="])
-except getopt.GetoptError:
-    print('setup-disk --device=<device>')
-    sys.exit(2)
-
-device = ''
-for opt, arg in opts:
-    if opt == '-h':
-        print('setup-disk -d <device>|--device=<device>')
-        sys.exit()
-    elif opt in ("-d", "--device"):
-        device = arg
-
-if len(device) == 0:
-    print('No device specified')
-    sys.exit(1)
-
-environment = Environment(False)
-
-storage = Storage(environment)
-storage.set_rootprefix("/mnt")
-storage.probe()                 # TODO error handling
-
-staging = storage.get_staging()
+        for id_ in ids[type_]:
+            part.set_id(id_)
 
 
-disk = find_disk(staging, device)
-disk.remove_descendants()
-
-gpt = to_gpt(disk.create_partition_table(PtType_GPT))
-
-
-partition1 = create_partition(gpt, 512 * MiB)
-partition1.set_id(ID_ESP)
-vfat = partition1.create_filesystem(FsType_VFAT)
-vfat.create_mount_point("/boot/efi")
+def _extend_mount_options(mount_point, mount_options):
+    """Extend the mount options of a mount point."""
+    current_mount_options = mount_point.get_mount_options()
+    # current_mount_options is a VectorString, so cannot be directly
+    # extended
+    for mount_option in mount_options:
+        current_mount_options.append(mount_option)
+    mount_point.set_mount_options(current_mount_options)
 
 
-partition2 = create_partition(gpt, 8 * GiB)
-partition2.set_id(ID_LINUX)
-btrfs = to_btrfs(partition2.create_filesystem(FsType_BTRFS))
-btrfs.create_mount_point("/")
+def _filesystem(partition, filesystem):
+    """Apply a filesystem in a partition."""
+    filesystems = {
+        "reiserfs": (storage.FsType_REISERFS, storage.to_reiserfs),
+        "ext2": (storage.FsType_EXT2, storage.to_ext2),
+        "ext3": (storage.FsType_EXT3, storage.to_ext3),
+        "ext4": (storage.FsType_EXT4, storage.to_ext4),
+        "btrfs": (storage.FsType_BTRFS, storage.to_btrfs),
+        "vfat": (storage.FsType_VFAT, storage.to_vfat),
+        "xfs": (storage.FsType_XFS, storage.to_xfs),
+        "jfs": (storage.FsType_JFS, storage.to_jfs),
+        # "hfs": (storage.FsType_HFS, storage.to_hfs),
+        "ntfs": (storage.FsType_NTFS, storage.to_ntfs),
+        "swap": (storage.FsType_SWAP, storage.to_swap),
+        # "hfsplus": (storage.FsType_HFSPLUS, storage.to_hfsplus),
+        "nfs": (storage.FsType_NFS, storage.to_nfs),
+        # "nfs4": (storage.FsType_NFS4, storage.to_nfs4),
+        "tmpfs": (storage.FsType_TMPFS, storage.to_tmpfs),
+        "iso9660": (storage.FsType_ISO9660, storage.to_iso9660),
+        "udf": (storage.FsType_UDF, storage.to_udf),
+        # "nilfs2": (storage.FsType_NILFS2, storage.to_nilfs2),
+        # "minix": (storage.FsType_MINIX, storage.to_minix),
+        # "ntfs3g": (storage.FsType_NTFS3G, storage.to_ntfs3g),
+        "f2fs": (storage.FsType_F2FS, storage.to_f2fs),
+        "exfat": (storage.FsType_EXFAT, storage.to_exfat),
+        "bitlocker": (storage.FsType_BITLOCKER, storage.to_bitlocker),
+        # "vboxsf": (storage.FsType_VBOXSF, storage.to_vboxsf),
+    }
 
-top_level = btrfs.get_top_level_btrfs_subvolume()
-at_subvolume = top_level.create_btrfs_subvolume("@")
+    fs = filesystem.get("filesystem", "btrfs")
+    if fs not in filesystems:
+        raise Exception(f"Filesystem {fs} not recognized")
+
+    fs_type, convert = filesystems[fs]
+    fs_ = convert(partition.create_filesystem(fs_type))
+
+    if "mountpoint" in filesystem:
+        mount_point = fs_.create_mount_point(filesystem["mountpoint"])
+        _extend_mount_options(mount_point, filesystem.get("mount_options", []))
+
+    if fs == "btrfs" and "subvolumes" in filesystem:
+        subvolumes = filesystem["subvolumes"]
+        top_level = fs_.get_top_level_btrfs_subvolume()
+        at_subvolume = top_level.create_btrfs_subvolume(subvolumes.get("prefix", "@"))
+
+        # The following code relies on the snapper installation helper
+        # to create further subvolumes, set the default subvolume and
+        # other stuff. Setup is confusing. YaST does it this way.
+        fs_.set_default_btrfs_subvolume(at_subvolume)
+        fs_.set_configure_snapper(True)
+
+        for subvolume in subvolumes.get("subvolume", []):
+            subv = at_subvolume.create_btrfs_subvolume("@/" + subvolume["path"])
+            mount_point = subv.create_mount_point("/" + subvolume["path"])
+            _extend_mount_options(mount_point, subvolume.get("mount_options", []))
+            subv.set_nocow(not subvolume.get("copy_on_write", True))
 
 
-# The following code relies on the snapper installation helper to create further subvolumes,
-# set the default subvolume and other stuff. Setup is confusing. YaST does it this way.
+def setup_disks(layout):
+    strge = storage.Storage(storage.Environment(False))
+    strge.set_rootprefix("/mnt")
+    strge.probe()
 
-btrfs.set_default_btrfs_subvolume(at_subvolume)
-btrfs.set_configure_snapper(True)
+    staging = strge.get_staging()
+
+    # Default label, in case that there is not a per-device
+    # redefinition
+    label_default = layout.get("config", {}).get("label", "gpt")
+
+    try:
+        devices = layout["partitions"]["devices"]
+    except KeyError:
+        raise Exception("Section 'devices' not found in the layout")
+
+    if not devices:
+        raise Exception("Section 'devices' is empty")
+
+    for device, partitions in devices.items():
+        label = partitions.get("label", label_default)
+        partitions = partitions["partitions"]
+
+        disk = _prepare_disk(staging, device)
+        _partition(disk, label, partitions)
+
+    try:
+        filesystems = layout["filesystems"]
+    except KeyError:
+        raise Exception("Section 'filesystems' not found in the layout")
+
+    if not filesystems:
+        raise Exception("Section 'filesystems' is empty")
+
+    for partition, filesystem in filesystems.items():
+        part = storage.Partition.find_by_name(staging, partition)
+        _filesystem(part, filesystem)
+
+    commit_options = storage.CommitOptions(True)
+    my_commit_callbacks = MyCommitCallbacks()
+
+    try:
+        strge.calculate_actiongraph()
+        strge.commit(commit_options, my_commit_callbacks)
+    except Exception as exception:
+        print(exception.what())
 
 
-class Subvolume():
-    def __init__(self, path, nocow = False):
-        self.path = path
-        self.nocow = nocow
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="TIU disk partitioner.")
+    parser.add_argument(
+        "-d",
+        "--device",
+        action="append",
+        default=[],
+        help="device to partition, repeat for each device",
+        metavar="DEVICE",
+    )
+    parser.add_argument(
+        "-l",
+        "--layout",
+        help="YAML document with partitioning layout",
+        metavar="YAML",
+    )
+    args = parser.parse_args()
 
-subvolumes = [ Subvolume("root"), Subvolume("var", nocow = True), Subvolume("srv"),
-               Subvolume("opt"), Subvolume("home"), Subvolume("usr"),
-               Subvolume("boot/grub2/i386-pc"), Subvolume("boot/grub2/x86_64-efi") ]
-x_initrd_mount = [ "root", "usr" ]
+    if args.layout:
+        with open(args.layout, "r") as f:
+            layout = f.read()
+    else:
+        layout = DEFAULT_LAYOUT
 
-for subvolume in subvolumes:
-    tmp = at_subvolume.create_btrfs_subvolume("@/" + subvolume.path)
-    mount_point = tmp.create_mount_point("/" + subvolume.path)
-    if subvolume.path in x_initrd_mount:
-        mount_options = mount_point.get_mount_options()
-        mount_options.append("x-initrd.mount")
-        mount_point.set_mount_options(mount_options)
-    tmp.set_nocow(subvolume.nocow)
-
-
-commit_options = CommitOptions(True)
-my_commit_callbacks = MyCommitCallbacks()
-
-try:
-    storage.calculate_actiongraph()
-    storage.commit(commit_options, my_commit_callbacks)
-except Exception as exception:
-    print(exception.what())
+    try:
+        layout = _resolve_devices(args.device, layout)
+        setup_disks(yaml.safe_load(layout))
+    except Exception as e:
+        if hasattr(e, "what"):
+            print(f"ERRROR: {e.what()}")
+        else:
+            print(f"ERROR: {e}")
