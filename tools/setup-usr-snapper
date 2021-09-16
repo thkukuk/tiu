@@ -10,5 +10,5 @@ snapper -c usr create
 umount ${ROOTDIR}/usr
 mount -o subvol=/@/usr/.snapshots/1/snapshot ${ROOTDEV} ${ROOTDIR}/usr
 btrfs property set ${ROOTDIR}/usr/ ro false
-sed -i -e 's|subvol=/@/usr|subvol=/@/usr/.snapshots/1/snapshot|g' ${ROOTDIR}/etc/fstab
-echo "${ROOTDEV}  /usr/.snapshots         btrfs  subvol=/@/usr/.snapshots             0  0" >> ${ROOTDIR}/etc/fstab
+sed -i -e 's|subvol=/@/usr|subvol=/@/usr/.snapshots/1/snapshot,ro|g' ${ROOTDIR}/etc/fstab
+echo "${ROOTDEV}  /usr/.snapshots         btrfs  subvol=/@/usr/.snapshots       0  0" >> ${ROOTDIR}/etc/fstab
