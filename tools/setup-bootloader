@@ -49,7 +49,7 @@ mount --make-rslave ${ROOTDIR}/proc
 
 chroot ${ROOTDIR} dracut
 
-sed -i -e 's|GRUB_CMDLINE_LINUX_DEFAULT=.*|GRUB_CMDLINE_LINUX_DEFAULT="rw quiet systemd.show_status=1 mitigations=auto net.ifnames=0 \\$ignition_firstboot"|g' ${ROOTDIR}/etc/default/grub
+sed -i -e 's|GRUB_CMDLINE_LINUX_DEFAULT=.*|GRUB_CMDLINE_LINUX_DEFAULT="rw quiet systemd.show_status=1 mitigations=auto \\$ignition_firstboot"|g' ${ROOTDIR}/etc/default/grub
 echo -e 'SUSE_BTRFS_SNAPSHOT_BOOTING="true"\nGRUB_DISABLE_OS_PROBER="true"' >> ${ROOTDIR}/etc/default/grub
 chroot ${ROOTDIR} sh -c "grub2-mkconfig > /boot/grub2/grub.cfg"
 #grub2-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=TIU /dev/vda
