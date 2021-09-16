@@ -26,31 +26,15 @@ ln -sf /usr/share/zoneinfo/UTC ${ROOTDIR}/etc/localtime
 # Systemd controls the console font now
 echo FONT="eurlatgr.psfu" >> /etc/vconsole.conf
 
-# lo network config
-mkdir -p ${ROOTDIR}/etc/sysconfig/network
-echo << EOT > ${ROOTDIR}/etc/sysconfig/network/ifcfg-lo
-# Loopback (lo) configuration
-IPADDR=127.0.0.1/8
-NETMASK=255.0.0.0
-NETWORK=127.0.0.0
-STARTMODE=nfsroot
-BOOTPROTO=static
-USERCONTROL=no
-FIREWALL=no
-EOT
-chmod 600 ${ROOTDIR}/etc/sysconfig/network/ifcfg-lo
+mkdir -p ${ROOTDIR}/etc/systemd/network
+# Enable DHCP on enp*
+echo << EOT > ${ROOTDIR}/etc/systemd/network/enp-dhcp.network
+[Match]
+Name=enp*
 
-# Enable DHCP on eth0
-echo << EOT > ${ROOTDIR}/etc/sysconfig/network/ifcfg-eth0
-BOOTPROTO='dhcp'
-STARTMODE='auto'
+[Network]
+DHCP=yes
 EOT
-chmod 600 ${ROOTDIR}/etc/sysconfig/network/ifcfg-eth0
-
-# bsc#1183407 / wrong wicked locations
-mkdir -p ${ROOTDIR}/etc/dbus-1/system.d/
-cp -a ${ROOTDIR}/usr/share/factory/etc/dbus-1/system.d/* ${ROOTDIR}/etc/dbus-1/system.d/
-cp -a ${ROOTDIR}/usr/share/factory/etc/wicked ${ROOTDIR}/etc
 
 # aaa_base, should be done via tmpfiles.d
 cp -a ${ROOTDIR}/usr/share/factory/etc/{bash.bashrc,profile} ${ROOTDIR}/etc/
