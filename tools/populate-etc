@@ -28,11 +28,10 @@ echo FONT="eurlatgr.psfu" >> /etc/vconsole.conf
 
 mkdir -p ${ROOTDIR}/etc/systemd/network
 # Enable DHCP on enp*
-echo << EOT > ${ROOTDIR}/etc/systemd/network/enp-dhcp.network
+cat << EOT > ${ROOTDIR}/etc/systemd/network/enp-dhcp.network
 [Match]
 Name=enp*
 
 [Network]
 DHCP=yes
 EOT
-
