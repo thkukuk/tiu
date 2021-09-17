@@ -36,6 +36,3 @@ Name=enp*
 DHCP=yes
 EOT
 
-# aaa_base, should be done via tmpfiles.d
-cp -a ${ROOTDIR}/usr/share/factory/etc/{bash.bashrc,profile} ${ROOTDIR}/etc/
-
