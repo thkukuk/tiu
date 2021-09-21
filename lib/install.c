@@ -44,9 +44,21 @@ install_system (const gchar *tiuname, const gchar *device,
 {
   GError *ierror = NULL;
 
-  exec_script ("/usr/libexec/tiu/setup-disk", device, &ierror);
-  exec_script ("/usr/libexec/tiu/setup-root", device, &ierror);
-  exec_script ("/usr/libexec/tiu/setup-usr-snapper", device, &ierror);
+  if (!exec_script ("/usr/libexec/tiu/setup-disk", device, &ierror))
+    {
+      g_propagate_error(error, ierror);
+      return FALSE;
+    }
+  if (!exec_script ("/usr/libexec/tiu/setup-root", device, &ierror))
+    {
+      g_propagate_error(error, ierror);
+      return FALSE;
+    }
+  if (!exec_script ("/usr/libexec/tiu/setup-usr-snapper", device, &ierror))
+    {
+      g_propagate_error(error, ierror);
+      return FALSE;
+    }
 
   if (!extract_tiu_image(tiuname, "/mnt/usr", &ierror))
     {
@@ -57,8 +69,21 @@ install_system (const gchar *tiuname, const gchar *device,
       return FALSE;
     }
 
-  exec_script ("/usr/libexec/tiu/populate-etc", device, &ierror);
-  exec_script ("/usr/libexec/tiu/setup-bootloader", device, &ierror);
+  if (!exec_script ("/usr/libexec/tiu/populate-etc", device, &ierror))
+    {
+      g_propagate_error(error, ierror);
+      return FALSE;
+    }
+  if (!exec_script ("/usr/libexec/tiu/setup-bootloader", device, &ierror))
+    {
+      g_propagate_error(error, ierror);
+      return FALSE;
+    }
+  if (!exec_script ("/usr/libexec/tiu/finish", device, &ierror))
+    {
+      g_propagate_error(error, ierror);
+      return FALSE;
+    }
 
   return TRUE;
 }

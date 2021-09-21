@@ -1,0 +1,13 @@
+#!/bin/bash
+
+set -e
+
+ROOTDIR=/mnt
+
+# Make sure /usr is newer than /etc
+touch ${ROOTDIR}/usr
+
+btrfs property set ${ROOTDIR}/usr/ ro true
+
+# Umount everything
+umount -R ${ROOTDIR}
