@@ -257,7 +257,7 @@ filesystems:
   ${DEVICE1_P3}:
     filesystem: btrfs
     mountpoint: /var
-    mount_options: ['nodatacow']
+    mount_options: ['nodatacow', 'x-initrd.mount']
 """
 
 
