@@ -195,6 +195,7 @@ filesystems:
           mount_options: ['x-initrd.mount']
         - path: var
           copy_on_write: no
+          mount_options: ['x-initrd.mount']
         - path: srv
         - path: opt
         - path: home
