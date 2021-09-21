@@ -109,6 +109,7 @@ tiu = executable(
 )
 
 tools = files(
+  'tools/finish',
   'tools/setup-disk',
   'tools/setup-root',
   'tools/setup-bootloader',
