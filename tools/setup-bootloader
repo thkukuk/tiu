@@ -47,7 +47,7 @@ mount --make-rslave ${ROOTDIR}/sys
 mount --rbind /proc ${ROOTDIR}/proc
 mount --make-rslave ${ROOTDIR}/proc
 
-chroot ${ROOTDIR} dracut
+chroot ${ROOTDIR} dracut > ${ROOTDIR}/var/log/dracut.log 2>&1
 
 sed -i -e 's|GRUB_CMDLINE_LINUX_DEFAULT=.*|GRUB_CMDLINE_LINUX_DEFAULT="rw quiet systemd.show_status=1 mitigations=auto \\$ignition_firstboot"|g' ${ROOTDIR}/etc/default/grub
 echo -e 'SUSE_BTRFS_SNAPSHOT_BOOTING="true"\nGRUB_DISABLE_OS_PROBER="true"' >> ${ROOTDIR}/etc/default/grub
