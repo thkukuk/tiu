@@ -170,7 +170,7 @@ applied to it.
 
       Path name for the sub-volume.
 
-	* "copy_on_write". Boolean. Optional. Default: "yes"
+    * "copy_on_write". Boolean. Optional. Default: "yes"
 
       Value for the copy-on-write option in "btrfs".
 
@@ -210,6 +210,7 @@ filesystems:
 import argparse
 import re
 import string
+import sys
 
 import storage
 import yaml
@@ -556,3 +557,4 @@ if __name__ == "__main__":
             print(f"ERRROR: {e.what()}")
         else:
             print(f"ERROR: {e}")
+        sys.exit(1)
