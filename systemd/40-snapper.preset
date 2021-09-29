@@ -1,0 +1,3 @@
+# Disable automatic snapper runs
+disable snapper-cleanup.timer
+disable snapper-timeline.timer
