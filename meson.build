@@ -55,6 +55,7 @@ libtiu_src = files(
   'lib/network.c',
   'lib/rm_rf.c',
   'lib/tiu_errors.c',
+  'lib/update.c',
   'lib/variables.c',
   'lib/verity_hash.c',
   'lib/workdir.c',

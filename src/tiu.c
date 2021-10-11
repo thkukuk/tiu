@@ -10,7 +10,8 @@ static GOptionEntry entries_create[] = {
 };
 static GOptionGroup *create_group;
 
-static gchar *squashfs_file = NULL;
+/* XXX should be NULL, read default from a config file */
+static gchar *squashfs_file = "https://download.opensuse.org/repositories/home:/kukuk:/tiu/images/repo/tiu/openSUSE-MicroOS.tiutar";
 static gchar *target_dir = NULL;
 static GOptionEntry entries_extract[] = {
   {"archive", 'a', 0, G_OPTION_ARG_FILENAME, &squashfs_file, "tiu archive", "FILENAME"},
@@ -27,6 +28,12 @@ static GOptionEntry entries_install[] = {
 };
 static GOptionGroup *install_group;
 
+static GOptionEntry entries_update[] = {
+  {"archive", 'a', 0, G_OPTION_ARG_FILENAME, &squashfs_file, "tiu archive", "FILENAME"},
+  {0}
+};
+static GOptionGroup *update_group;
+
 static void
 init_group_options (void)
 {
@@ -41,6 +48,10 @@ init_group_options (void)
   install_group = g_option_group_new("install", "Installation options:",
 				    "Show help options for install", NULL, NULL);
   g_option_group_add_entries(install_group, entries_install);
+
+  update_group = g_option_group_new("update", "Update options:",
+				    "Show help options for update", NULL, NULL);
+  g_option_group_add_entries(update_group, entries_update);
 }
 
 int
@@ -64,13 +75,15 @@ main(int argc, char **argv)
   context = g_option_context_new("<COMMAND>");
   g_option_context_add_main_entries (context, options, NULL);
   g_option_context_set_description (context, "List of tiu commands:\n"
-				    "  extract\tExtract a tiu archive\n"
 				    "  create\tCreate a tiu update file\n"
+				    "  extract\tExtract a tiu archive\n"
 				    "  install\tInstall a new system\n"
+				    "  update\tUpdate current system\n"
 				    );
-  g_option_context_add_group (context, extract_group);
   g_option_context_add_group (context, create_group);
+  g_option_context_add_group (context, extract_group);
   g_option_context_add_group (context, install_group);
+  g_option_context_add_group (context, update_group);
 
   if (!g_option_context_parse(context, &argc, &argv, &error))
     {
@@ -160,6 +173,26 @@ main(int argc, char **argv)
 	}
 
       if (!install_system (squashfs_file, device, &error))
+	{
+	  if (error)
+	    {
+	      g_fprintf (stderr, "ERROR: %s\n", error->message);
+	      g_clear_error (&error);
+	    }
+	  else
+	    g_fprintf (stderr, "ERROR: installation of the archive failed!\n");
+	  exit (1);
+	}
+    }
+  else if (strcmp (argv[1], "update") == 0)
+    {
+      if (squashfs_file == NULL)
+	{
+	  fprintf (stderr, "ERROR: no tiu archive as input specified!\n");
+	  exit (1);
+	}
+
+      if (!update_system (squashfs_file, &error))
 	{
 	  if (error)
 	    {

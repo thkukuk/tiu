@@ -4,6 +4,7 @@ LIBTIU_1.0 {
     debug_flag;
     extract_tiu_image;
     install_system;
+    update_system;
   local:
     *;
 };

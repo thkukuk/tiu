@@ -20,6 +20,7 @@ extern gboolean debug_flag;
 extern gboolean extract_tiu_image(const gchar *tiuname, const gchar *outputdir, GError **error);
 extern gboolean create_images (const gchar *input, GError **error);
 extern gboolean install_system (const gchar *input, const gchar *device, GError **error);
+extern gboolean update_system (const gchar *input, GError **error);
 
 /* Internal, move in separate header */
 
