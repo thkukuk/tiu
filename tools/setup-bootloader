@@ -48,14 +48,10 @@ for i in "${ROOTDIR}"/usr/lib/modules/* ; do
     chroot ${ROOTDIR} dracut --kver $KVER >> /var/log/dracut.log 2>&1
 done
 
-# XXX we need /etc/os-release alread now
+# we need /etc/os-release alread now
 ln -sf ../usr/lib/os-release ${ROOTDIR}/etc/os-release
 sed -i -e 's|GRUB_CMDLINE_LINUX_DEFAULT=.*|GRUB_CMDLINE_LINUX_DEFAULT="rw quiet systemd.show_status=1 mitigations=auto \\$ignition_firstboot"|g' ${ROOTDIR}/etc/default/grub
 echo -e 'SUSE_BTRFS_SNAPSHOT_BOOTING="true"\nGRUB_DISABLE_OS_PROBER="true"' >> ${ROOTDIR}/etc/default/grub
-#chroot ${ROOTDIR} sh -c "grub2-mkconfig > /boot/grub2/grub.cfg"
-#chmod 600 ${ROOTDIR}/boot/grub2/grub.cfg
 echo 'LOADER_TYPE="grub2"' > ${ROOTDIR}/etc/sysconfig/bootloader
 echo -e "${device}\nactivate" > ${ROOTDIR}/etc/default/grub_installdevice
-##grub2-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=TIU /dev/vda
-#chroot ${ROOTDIR} grub2-install "${device}"
-chroot ${ROOTDIR} pbl --install
+chroot ${ROOTDIR} pbl --config --install
