@@ -1,0 +1,18 @@
+#!/bin/bash
+
+FILES=".vmlinuz.hmac System.map sysctl.conf vmlinuz"
+
+for i in ${FILES} initrd ; do
+    rm -f /boot/"${i}"*
+done
+
+# Install the kernel
+for i in /usr/lib/modules/* ; do
+    KVER=$(basename "$i")
+    for f in .vmlinuz.hmac System.map sysctl.conf vmlinuz; do
+        cp -a "/usr/lib/modules/$KVER/$f" "/boot/$f-$KVER"
+    done
+    dracut --kver "$KVER" /var/log/dracut-"$KVER".log 2>&1
+done
+
+# XXX cleanup old /var/log/dracut-*.log files

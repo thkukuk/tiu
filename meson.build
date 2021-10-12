@@ -116,6 +116,7 @@ tools = files(
   'tools/setup-bootloader',
   'tools/setup-usr-snapper',
   'tools/populate-etc',
+  'tools/update-kernel',
 )
 
 install_data(

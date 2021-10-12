@@ -267,6 +267,80 @@ btrfs_set_default (const gchar *btrfs_id, const gchar *path, GError **error)
   return retval;
 }
 
+static gboolean
+update_kernel (GError **error)
+{
+  g_autoptr (GSubprocess) sproc = NULL;
+  GError *ierror = NULL;
+  GPtrArray *args = g_ptr_array_new_full(8, NULL);
+  gboolean retval = TRUE;
+
+  if (debug_flag)
+    g_printf("Updating kernel in /boot...\n");
+
+  g_ptr_array_add(args, "/usr/libexec/tiu/update-kernel");
+  g_ptr_array_add(args, NULL);
+
+  sproc = g_subprocess_newv((const gchar * const *)args->pdata,
+                            G_SUBPROCESS_FLAGS_STDOUT_PIPE, &ierror);
+  if (sproc == NULL)
+    {
+      g_propagate_prefixed_error(error, ierror,
+				 "Failed to start sub-process: ");
+      retval = FALSE;
+      goto cleanup;
+    }
+
+  if (!g_subprocess_wait_check(sproc, NULL, &ierror))
+    {
+      g_propagate_prefixed_error(error, ierror,
+                                 "Failed to execute sub-process: ");
+      retval = FALSE;
+    }
+
+ cleanup:
+  g_ptr_array_free (args, TRUE);
+
+  return retval;
+}
+
+static gboolean
+update_bootloader (GError **error)
+{
+  g_autoptr (GSubprocess) sproc = NULL;
+  GError *ierror = NULL;
+  GPtrArray *args = g_ptr_array_new_full(8, NULL);
+  gboolean retval = TRUE;
+
+  if (debug_flag)
+    g_printf("Updating bootloader...\n");
+
+  g_ptr_array_add(args, "/usr/sbin/update-bootlaoder");
+  g_ptr_array_add(args, "--reinit");
+  g_ptr_array_add(args, NULL);
+
+  sproc = g_subprocess_newv((const gchar * const *)args->pdata,
+                            G_SUBPROCESS_FLAGS_STDOUT_PIPE, &ierror);
+  if (sproc == NULL)
+    {
+      g_propagate_prefixed_error(error, ierror,
+				 "Failed to start sub-process: ");
+      retval = FALSE;
+      goto cleanup;
+    }
+
+  if (!g_subprocess_wait_check(sproc, NULL, &ierror))
+    {
+      g_propagate_prefixed_error(error, ierror,
+                                 "Failed to execute sub-process: ");
+      retval = FALSE;
+    }
+
+ cleanup:
+  g_ptr_array_free (args, TRUE);
+
+  return retval;
+}
 
 gboolean
 update_system (const gchar *tiuname, GError **error)
@@ -324,6 +398,20 @@ update_system (const gchar *tiuname, GError **error)
     }
 
   if (!adjust_etc_fstab (root_path, snapshot_usr, &ierror))
+    {
+      g_propagate_error(error, ierror);
+      retval = FALSE;
+      goto cleanup;
+    }
+
+  if (!update_kernel (&ierror))
+    {
+      g_propagate_error(error, ierror);
+      retval = FALSE;
+      goto cleanup;
+    }
+
+  if (!update_bootloader (&ierror))
     {
       g_propagate_error(error, ierror);
       retval = FALSE;
