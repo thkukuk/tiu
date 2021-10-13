@@ -31,14 +31,14 @@ snapper_create (const gchar *config, gchar **output, GError **error)
                             G_SUBPROCESS_FLAGS_STDOUT_PIPE, &ierror);
   if (sproc == NULL)
     {
-      g_propagate_prefixed_error(error, ierror, "Failed to start sub-process: ");
+      g_propagate_prefixed_error(error, ierror, "Failed to start snapper: ");
       return FALSE;
     }
 
   if (!g_subprocess_wait_check(sproc, NULL, &ierror))
     {
       g_propagate_prefixed_error(error, ierror,
-                                 "Failed to execute sub-process: ");
+                                 "Failed to execute snapper: ");
       return FALSE;
     }
 
@@ -93,14 +93,14 @@ btrfs_set_readonly (const gchar *path, gboolean ro, GError **error)
                             G_SUBPROCESS_FLAGS_STDOUT_PIPE, &ierror);
   if (sproc == NULL)
     {
-      g_propagate_prefixed_error(error, ierror, "Failed to start sub-process: ");
+      g_propagate_prefixed_error(error, ierror, "Failed to start btrfs set property: ");
       return FALSE;
     }
 
   if (!g_subprocess_wait_check(sproc, NULL, &ierror))
     {
       g_propagate_prefixed_error(error, ierror,
-                                 "Failed to execute sub-process: ");
+                                 "Failed to execute btrfs set property: ");
       return FALSE;
     }
 
@@ -134,7 +134,7 @@ adjust_etc_fstab (const gchar *path, const gchar *snapshot_usr, GError **error)
                             G_SUBPROCESS_FLAGS_STDOUT_PIPE, &ierror);
   if (sproc == NULL)
     {
-      g_propagate_prefixed_error(error, ierror, "Failed to start sub-process: ");
+      g_propagate_prefixed_error(error, ierror, "Failed to start sed on /etc/fstab: ");
       retval = FALSE;
       goto cleanup;
     }
@@ -142,7 +142,7 @@ adjust_etc_fstab (const gchar *path, const gchar *snapshot_usr, GError **error)
   if (!g_subprocess_wait_check(sproc, NULL, &ierror))
     {
       g_propagate_prefixed_error(error, ierror,
-                                 "Failed to execute sub-process: ");
+                                 "Failed to execute sed on /etc/fstab: ");
       retval = FALSE;
     }
 
@@ -178,7 +178,7 @@ btrfs_get_subvolume_id (const gchar *snapshot_dir, gchar **output, GError **erro
                             G_SUBPROCESS_FLAGS_STDOUT_PIPE, &ierror);
   if (sproc == NULL)
     {
-      g_propagate_prefixed_error(error, ierror, "Failed to start sub-process: ");
+      g_propagate_prefixed_error(error, ierror, "Failed to start getting subvolume ID: ");
       retval = FALSE;
       goto cleanup;
     }
@@ -186,7 +186,7 @@ btrfs_get_subvolume_id (const gchar *snapshot_dir, gchar **output, GError **erro
   if (!g_subprocess_wait_check(sproc, NULL, &ierror))
     {
       g_propagate_prefixed_error(error, ierror,
-                                 "Failed to execute sub-process: ");
+                                 "Failed to execute getting subvolume ID: ");
       retval = FALSE;
       goto cleanup;
     }
@@ -196,7 +196,7 @@ btrfs_get_subvolume_id (const gchar *snapshot_dir, gchar **output, GError **erro
   if (!g_subprocess_communicate_utf8 (sproc, NULL, NULL, &stdout, &stderr, &ierror))
     {
       g_propagate_prefixed_error(error, ierror,
-                                 "Failed to read stdout: ");
+                                 "Failed to read stdout to get subvolume ID: ");
       retval = FALSE;
       goto cleanup;
 
@@ -214,7 +214,7 @@ btrfs_get_subvolume_id (const gchar *snapshot_dir, gchar **output, GError **erro
     {
       *output = NULL;
       g_set_error(error, G_FILE_ERROR, g_file_error_from_errno(EPIPE),
-		  "Failed to read stdout");
+		  "Failed to read stdout to get subvolume ID:");
       retval = FALSE;
       goto cleanup;
     }
@@ -249,7 +249,7 @@ btrfs_set_default (const gchar *btrfs_id, const gchar *path, GError **error)
                             G_SUBPROCESS_FLAGS_STDOUT_PIPE, &ierror);
   if (sproc == NULL)
     {
-      g_propagate_prefixed_error(error, ierror, "Failed to start sub-process: ");
+      g_propagate_prefixed_error(error, ierror, "Failed to start setting default subvolume: ");
       retval = FALSE;
       goto cleanup;
     }
@@ -257,7 +257,7 @@ btrfs_set_default (const gchar *btrfs_id, const gchar *path, GError **error)
   if (!g_subprocess_wait_check(sproc, NULL, &ierror))
     {
       g_propagate_prefixed_error(error, ierror,
-                                 "Failed to execute sub-process: ");
+                                 "Failed to execute setting default subvolume: ");
       retval = FALSE;
     }
 
@@ -286,7 +286,7 @@ update_kernel (GError **error)
   if (sproc == NULL)
     {
       g_propagate_prefixed_error(error, ierror,
-				 "Failed to start sub-process: ");
+				 "Failed to start update-kernel sub-process: ");
       retval = FALSE;
       goto cleanup;
     }
@@ -294,7 +294,7 @@ update_kernel (GError **error)
   if (!g_subprocess_wait_check(sproc, NULL, &ierror))
     {
       g_propagate_prefixed_error(error, ierror,
-                                 "Failed to execute sub-process: ");
+                                 "Failed to execute update-kernel sub-process: ");
       retval = FALSE;
     }
 
@@ -349,6 +349,7 @@ update_system (const gchar *tiuname, GError **error)
   GError *ierror = NULL;
   gchar *snapshot_root = NULL;
   gchar *snapshot_usr = NULL;
+  gchar *subvol_id = NULL;
 
   if (!snapper_create ("usr", &snapshot_usr, &ierror))
     {
@@ -418,7 +419,6 @@ update_system (const gchar *tiuname, GError **error)
       goto cleanup;
     }
 
-  gchar *subvol_id = NULL;
   btrfs_get_subvolume_id (root_path, &subvol_id, &ierror);
   btrfs_set_default (subvol_id, root_path, &ierror);
 
