@@ -315,7 +315,7 @@ update_bootloader (GError **error)
   if (debug_flag)
     g_printf("Updating bootloader...\n");
 
-  g_ptr_array_add(args, "/usr/sbin/update-bootlaoder");
+  g_ptr_array_add(args, "/usr/sbin/update-bootloader");
   g_ptr_array_add(args, "--reinit");
   g_ptr_array_add(args, NULL);
 
