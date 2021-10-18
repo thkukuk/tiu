@@ -105,7 +105,7 @@ libtiu_dep = declare_dependency(
 tiu = executable(
   'tiu',
   tiu_src,
-  dependencies : libtiu_dep,
+  dependencies : [libtiu_dep, libeconf_dep, ],
   install : true,
 )
 

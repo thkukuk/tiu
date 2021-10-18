@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <glib/gprintf.h>
+#include <libeconf.h>
 #include "tiu.h"
 
 static gchar *input_tar = NULL;
@@ -23,7 +24,7 @@ static GOptionEntry entries_create[] = {
 static GOptionGroup *create_group;
 
 /* XXX should be NULL, read default from a config file */
-static gchar *squashfs_file = "https://download.opensuse.org/repositories/home:/kukuk:/tiu/images/repo/tiu/openSUSE-MicroOS.tiutar";
+static gchar *squashfs_file = NULL;
 static gchar *target_dir = NULL;
 static GOptionEntry entries_extract[] = {
   {"archive", 'a', 0, G_OPTION_ARG_FILENAME, &squashfs_file, "tiu archive", "FILENAME"},
@@ -174,8 +175,29 @@ main(int argc, char **argv)
     {
       if (squashfs_file == NULL)
 	{
-	  fprintf (stderr, "ERROR: no tiu archive as input specified!\n");
-	  exit (1);
+	  econf_file *key_file = NULL;
+	  econf_err ecerror;
+	  ecerror = econf_readDirs (&key_file,
+				    "/usr/share/tiu",
+				    "/etc",
+				    "tiu",
+				    "conf",
+				    "=", "#");
+	  /* XXX error handling */
+
+	  /* Try at first special "install" group, if not set, use "global" */
+	  ecerror = econf_getStringValue(key_file, "install", "archive", &squashfs_file);
+
+	  if (ecerror != ECONF_SUCCESS)
+	    ecerror = econf_getStringValue(key_file, "global", "archive", &squashfs_file);
+
+	  econf_free (key_file);
+
+	  if (squashfs_file == NULL)
+	    {
+	      fprintf (stderr, "ERROR: no tiu archive as input specified!\n");
+	      exit (1);
+	    }
 	}
 
       if (device == NULL)
@@ -200,8 +222,29 @@ main(int argc, char **argv)
     {
       if (squashfs_file == NULL)
 	{
-	  fprintf (stderr, "ERROR: no tiu archive as input specified!\n");
-	  exit (1);
+	  econf_file *key_file = NULL;
+	  econf_err ecerror;
+	  ecerror = econf_readDirs (&key_file,
+				    "/usr/share/tiu",
+				    "/etc",
+				    "tiu",
+				    "conf",
+				    "=", "#");
+	  /* XXX error handling */
+
+	  /* Try at first special "update" group, if not set, use "global" */
+	  ecerror = econf_getStringValue(key_file, "install", "update", &squashfs_file);
+
+	  if (ecerror != ECONF_SUCCESS)
+	    ecerror = econf_getStringValue(key_file, "global", "archive", &squashfs_file);
+
+	  econf_free (key_file);
+
+	  if (squashfs_file == NULL)
+	    {
+	      fprintf (stderr, "ERROR: no tiu archive as input specified!\n");
+	      exit (1);
+	    }
 	}
 
       if (!update_system (squashfs_file, &error))
