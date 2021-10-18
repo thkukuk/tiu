@@ -124,5 +124,14 @@ install_data(
   install_dir : join_paths(get_option('libexecdir'), 'tiu'),
 )
 
+config = files(
+  'conf/tiu.conf',
+)
+
+install_data(
+  config,
+  install_dir : join_paths(get_option('datadir'), 'tiu'),
+)
+
 # Unit tests
 #subdir('tests')
