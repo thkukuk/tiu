@@ -22,34 +22,34 @@ is_remote_scheme (const gchar *scheme)
 G_STATIC_ASSERT(sizeof(curl_off_t) == 8);
 
 typedef struct {
-	const gchar *url;
+  const gchar *url;
+  FILE *dl;
+  curl_off_t pos;
+  curl_off_t limit;
+  gchar *err;
+} IMGTransfer;
 
-	FILE *dl;
-
-	curl_off_t pos;
-	curl_off_t limit;
-
-	gchar *err;
-} RaucTransfer;
-
-gboolean network_init(GError **error)
+gboolean
+network_init (GError **error)
 {
-	CURLcode res;
+  CURLcode res;
 
-	g_return_val_if_fail(error == NULL || *error == NULL, FALSE);
+  g_return_val_if_fail(error == NULL || *error == NULL, FALSE);
 
-	res = curl_global_init(CURL_GLOBAL_ALL);
-	if (res != CURLE_OK) {
-		g_set_error(error, G_IO_ERROR, G_IO_ERROR_FAILED, "Initializing curl failed: %s", curl_easy_strerror(res));
-		return FALSE;
-	}
+  res = curl_global_init(CURL_GLOBAL_ALL);
+  if (res != CURLE_OK)
+    {
+      g_set_error(error, G_IO_ERROR, G_IO_ERROR_FAILED,
+		  "Initializing curl failed: %s", curl_easy_strerror(res));
+      return FALSE;
+    }
 
-	return TRUE;
+  return TRUE;
 }
 
 static size_t write_cb(char *ptr, size_t size, size_t nmemb, void *userdata)
 {
-	RaucTransfer *xfer = userdata;
+	IMGTransfer *xfer = userdata;
 	size_t res;
 
 	/* check transfer limit */
@@ -70,7 +70,7 @@ static int xfer_cb(void *clientp, curl_off_t dltotal, curl_off_t dlnow,
 		   curl_off_t ultotal __attribute__((unused)),
 		   curl_off_t ulnow __attribute__((unused)))
 {
-	RaucTransfer *xfer = clientp;
+	IMGTransfer *xfer = clientp;
 
 	/* check transfer limit */
 	if (xfer->limit) {
@@ -84,7 +84,8 @@ static int xfer_cb(void *clientp, curl_off_t dltotal, curl_off_t dlnow,
 	return 0;
 }
 
-static gboolean transfer(RaucTransfer *xfer, GError **error)
+static gboolean
+transfer(IMGTransfer *xfer, GError **error)
 {
 	CURL *curl = NULL;
 	CURLcode r;
@@ -101,8 +102,8 @@ static gboolean transfer(RaucTransfer *xfer, GError **error)
 	}
 
 	if (debug_flag)
-	    curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
-	curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L); /* avoid signals for threading */
+	  curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+	// curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L); /* avoid signals for threading */
 	curl_easy_setopt(curl, CURLOPT_URL, xfer->url);
 	curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
 	curl_easy_setopt(curl, CURLOPT_MAXREDIRS, 8L);
@@ -149,41 +150,49 @@ out:
 	return res;
 }
 
-gboolean download_file(const gchar *target, const gchar *url, goffset limit, GError **error)
+gboolean
+download_file(const gchar *target, const gchar *url,
+	      goffset limit, GError **error)
 {
-	RaucTransfer xfer = {0};
-	gboolean res = FALSE;
-	GError *ierror = NULL;
+  IMGTransfer xfer = {0};
+  gboolean res = FALSE;
+  GError *ierror = NULL;
 
-	g_return_val_if_fail(target, FALSE);
-	g_return_val_if_fail(url, FALSE);
-	g_return_val_if_fail(error == NULL || *error == NULL, FALSE);
+  g_return_val_if_fail(target, FALSE);
+  g_return_val_if_fail(url, FALSE);
+  g_return_val_if_fail(error == NULL || *error == NULL, FALSE);
 
-	xfer.url = url;
-	xfer.limit = limit;
+  xfer.url = url;
+  xfer.limit = limit;
 
-	/* TODO: resume incomplete downloads */
+  xfer.dl = fopen(target, "wbx");
+  if (xfer.dl == NULL)
+    {
+      g_set_error(error, G_IO_ERROR, G_IO_ERROR_FAILED,
+		  "Failed opening target file");
+      goto out;
+    }
 
-	xfer.dl = fopen(target, "wbx");
-	if (xfer.dl == NULL) {
-		g_set_error(error, G_IO_ERROR, G_IO_ERROR_FAILED, "Failed opening target file");
-		goto out;
+  res = transfer(&xfer, &ierror);
+  if (!res)
+    {
+      g_propagate_error(error, ierror);
+      goto out;
+    }
+
+  fprintf (stderr, "transfer succeeded\n");
+
+ out:
+  if (xfer.dl)
+    {
+      if (fclose(xfer.dl))
+	{
+	  int err = errno;
+	  fprintf (stderr, "Failed to close download file '%s': %s\n",
+		   target, g_strerror(err));
 	}
+      xfer.dl = NULL;
+    }
 
-	res = transfer(&xfer, &ierror);
-	if (!res) {
-		g_propagate_error(error, ierror);
-		goto out;
-	}
-
-out:
-	if (xfer.dl) {
-		if (fclose(xfer.dl)) {
-			int err = errno;
-			g_debug("Failed to close download file '%s': %s", target, g_strerror(err));
-		}
-		xfer.dl = NULL;
-	}
-
-	return res;
+  return res;
 }
