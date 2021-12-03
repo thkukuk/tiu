@@ -106,11 +106,16 @@ main(int argc, char **argv)
     }
 
   if (version)
-    g_print("TIU - Transactional Image Update Version %s\n", "0.1");
+    {
+      g_print("TIU - Transactional Image Update Version %s\n", "0.1");
+      exit (0);
+    }
 
-  /* Nothing more to do */
-  if (argc == 1)
-    exit (0);
+  if (argc < 1)
+    {
+      g_fprintf (stderr, "ERROR: no argument given!\n");
+      exit (1);
+    }
 
   if (getuid () != 0)
     {
