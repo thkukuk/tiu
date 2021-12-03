@@ -180,8 +180,6 @@ download_file(const gchar *target, const gchar *url,
       goto out;
     }
 
-  fprintf (stderr, "transfer succeeded\n");
-
  out:
   if (xfer.dl)
     {
