@@ -2,7 +2,7 @@
 #include <glib.h>
 #include <gio/gio.h>
 
-#include "tiu.h"
+#include "tiu-internal.h"
 
 gboolean
 casync_make (const gchar *inputdir, const gchar *outfile,

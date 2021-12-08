@@ -21,6 +21,7 @@
 #include <libeconf.h>
 
 #include "tiu.h"
+#include "tiu-internal.h"
 
 static gboolean
 snapper_create (const gchar *config, gchar **output, GError **error)
@@ -388,7 +389,7 @@ update_system (const gchar *tiuname, GError **error)
       goto cleanup;
     }
 
-  if (!extract_tiu_image(tiuname, usr_path, &ierror))
+  if (!extract_image(tiuname, usr_path, &ierror))
     {
       g_propagate_error(error, ierror);
       retval = FALSE;

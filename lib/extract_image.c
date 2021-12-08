@@ -3,6 +3,7 @@
 #include <libeconf.h>
 
 #include "tiu.h"
+#include "tiu-internal.h"
 
 static gchar *
 resolve_tiu_path(const char *path)
@@ -60,8 +61,8 @@ resolve_tiu_path(const char *path)
 }
 
 gboolean
-extract_tiu_image(const gchar *tiuname, const gchar *outputdir,
-		  GError **error)
+extract_image(const gchar *tiuname, const gchar *outputdir,
+	      GError **error)
 {
   GError *ierror = NULL;
   TIUBundle *bundle = NULL;

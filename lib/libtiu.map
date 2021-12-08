@@ -1,10 +1,11 @@
 LIBTIU_1.0 {
   global:
-    create_images;
+    create_image;
     debug_flag;
-    extract_tiu_image;
+    extract_image;
     install_system;
     update_system;
+    verbose_flag;
   local:
     *;
 };

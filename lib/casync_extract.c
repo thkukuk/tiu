@@ -2,7 +2,7 @@
 #include <gio/gio.h>
 #include <glib/gprintf.h>
 
-#include "tiu.h"
+#include "tiu-internal.h"
 
 gboolean
 casync_extract(const gchar *input, const gchar *dest, const gchar *store,

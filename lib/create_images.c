@@ -8,6 +8,7 @@
 #include <openssl/rand.h>
 
 #include "tiu.h"
+#include "tiu-internal.h"
 #include "verity_hash.h"
 #include "network.h"
 
@@ -309,7 +310,7 @@ calc_verity (const gchar *tiufile, GError **error)
 }
 
 gboolean
-create_images (const gchar *input, GError **gerror)
+create_image (const gchar *input, GError **gerror)
 {
   const gchar *cachedir = "/var/cache/tiu";
   const gchar *tmpdir = NULL;

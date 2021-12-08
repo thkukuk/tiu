@@ -15,6 +15,7 @@
 #include <glib/gprintf.h>
 #include <libeconf.h>
 #include "tiu.h"
+#include "tiu-internal.h"
 
 static gchar *input_tar = NULL;
 static GOptionEntry entries_create[] = {
@@ -75,6 +76,7 @@ main(int argc, char **argv)
   GError *error = NULL;
   GOptionEntry options[] = {
     {"debug", '\0', 0, G_OPTION_ARG_NONE, &debug_flag, "enable debug output", NULL},
+    {"verbose", '\0', 0, G_OPTION_ARG_NONE, &verbose_flag, "enable verbose output", NULL},
     {"version", '\0', 0, G_OPTION_ARG_NONE, &version, "display version", NULL},
     {"help", 'h', 0, G_OPTION_ARG_NONE, &help, NULL, NULL},
     {0}
@@ -131,7 +133,7 @@ main(int argc, char **argv)
 	  return 1;
 	}
 
-      if (!create_images(input_tar, &error))
+      if (!create_image(input_tar, &error))
 	{
 	  if (error)
 	    {
@@ -164,7 +166,7 @@ main(int argc, char **argv)
 	}
 
 
-      if (!extract_tiu_image(squashfs_file, target_dir, &error))
+      if (!extract_image(squashfs_file, target_dir, &error))
 	{
 	  if (error)
 	    {

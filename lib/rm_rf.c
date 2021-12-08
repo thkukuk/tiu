@@ -3,7 +3,7 @@
 #include <glib.h>
 #include <gio/gio.h>
 
-#include "tiu.h"
+#include "tiu-internal.h"
 
 /*
    Recursively delete @file and its children. @file may be a file or a

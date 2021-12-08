@@ -19,6 +19,7 @@
 #include <libeconf.h>
 
 #include "tiu.h"
+#include "tiu-internal.h"
 
 static gboolean
 exec_script (const gchar *script, const gchar *device, GError **error)
@@ -76,7 +77,7 @@ install_system (const gchar *tiuname, const gchar *device,
       return FALSE;
     }
 
-  if (!extract_tiu_image(tiuname, "/mnt/usr", &ierror))
+  if (!extract_image(tiuname, "/mnt/usr", &ierror))
     {
       if (ierror)
 	g_propagate_error(error, ierror);

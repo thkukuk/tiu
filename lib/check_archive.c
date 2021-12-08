@@ -8,7 +8,7 @@
 #include <glib/gstdio.h>
 #include <gio/gfiledescriptorbased.h>
 
-#include "tiu.h"
+#include "tiu-internal.h"
 #include "verity_hash.h"
 #include "network.h"
 #include "tiu-errors.h"

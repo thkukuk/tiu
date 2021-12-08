@@ -2,7 +2,7 @@
 #include <glib.h>
 #include <gio/gio.h>
 
-#include "tiu.h"
+#include "tiu-internal.h"
 
 static gboolean
 create_btrfs_subvolume (const gchar *subvolume, GError **error)
