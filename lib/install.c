@@ -56,7 +56,7 @@ exec_script (const gchar *script, const gchar *device, GError **error)
 }
 
 gboolean
-install_system (const gchar *tiuname, const gchar *device,
+install_system (TIUBundle *bundle, const gchar *device,
 		GError **error)
 {
   GError *ierror = NULL;
@@ -77,7 +77,7 @@ install_system (const gchar *tiuname, const gchar *device,
       return FALSE;
     }
 
-  if (!extract_image(tiuname, "/mnt/usr", &ierror))
+  if (!extract_image(bundle, "/mnt/usr", &ierror))
     {
       if (ierror)
 	g_propagate_error(error, ierror);

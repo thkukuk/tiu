@@ -1,4 +1,4 @@
-/*  Copyright (C) 2021  Thorsten Kukuk <kukuk@suse.com>
+/*  Copyright (C) 2022  Thorsten Kukuk <kukuk@suse.com>
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
@@ -22,11 +22,16 @@
 extern "C" {
 #endif
 
-/* External */
-extern gboolean extract_image(const gchar *tiuname, const gchar *outputdir, GError **error);
+typedef struct TIUBundle TIUBundle;
+
+extern gboolean extract_image(TIUBundle *bundle, const gchar *outputdir, GError **error);
 extern gboolean create_image (const gchar *input, GError **error);
-extern gboolean install_system (const gchar *input, const gchar *device, GError **error);
-extern gboolean update_system (const gchar *input, GError **error);
+extern gboolean install_system (TIUBundle *bundle, const gchar *device, GError **error);
+extern gboolean update_system (TIUBundle *bundle, GError **error);
+extern gboolean download_tiu_archive (const gchar *tiuname, TIUBundle **bundle, GError **error);
+extern gboolean check_tiu_archive(TIUBundle *bundle, GError **error);
+extern gboolean umount_tiu_archive (TIUBundle *bundle, GError **error);
+extern gboolean mount_tiu_archive(TIUBundle *bundle, GError **error);
 
 #ifdef __cplusplus
 }

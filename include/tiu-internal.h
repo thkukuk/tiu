@@ -39,7 +39,7 @@ G_DEFINE_AUTOPTR_CLEANUP_FUNC(tiu_manifest, free_manifest)
 extern gboolean verbose_flag;
 extern gboolean debug_flag;
 
-typedef struct {
+typedef struct TIUBundle {
   gchar *path;
   gchar *origpath;
   GInputStream *stream;
@@ -57,6 +57,3 @@ extern gboolean workdir_destroy (const gchar *workdir, GError **error);
 extern gboolean casync_make (const gchar *inputdir, const gchar *outfile, const gchar *store, GError **error);
 extern gboolean casync_extract(const gchar *input, const gchar *dest, const gchar *store, const gchar *seed, GError **error);
 extern gboolean rm_rf (GFile *file, GCancellable *cancellable, GError **error);
-extern gboolean check_tiu_archive(const gchar *tiuname, TIUBundle **bundle, GError **error);
-extern gboolean umount_tiu_archive (TIUBundle *bundle, GError **error);
-extern gboolean mount_tiu_archive(TIUBundle *bundle, GError **error);

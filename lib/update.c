@@ -360,7 +360,7 @@ update_bootloader (GError **error)
 }
 
 gboolean
-update_system (const gchar *tiuname, GError **error)
+update_system (TIUBundle *bundle, GError **error)
 {
   gboolean retval = TRUE;
   GError *ierror = NULL;
@@ -389,7 +389,7 @@ update_system (const gchar *tiuname, GError **error)
       goto cleanup;
     }
 
-  if (!extract_image(tiuname, usr_path, &ierror))
+  if (!extract_image(bundle, usr_path, &ierror))
     {
       g_propagate_error(error, ierror);
       retval = FALSE;

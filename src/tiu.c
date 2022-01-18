@@ -68,6 +68,50 @@ init_group_options (void)
   g_option_group_add_entries(update_group, entries_update);
 }
 
+static gboolean
+download_check_mount(const gchar *tiuname, TIUBundle **bundle)
+{
+  GError *error = NULL;
+
+  if (!download_tiu_archive (tiuname, bundle, &error))
+    {
+      if (error)
+	{
+	  g_fprintf (stderr, "ERROR: %s\n", error->message);
+	  g_clear_error (&error);
+	}
+      else
+	g_fprintf (stderr, "ERROR: download of the archive failed!\n");
+      return FALSE;
+    }
+
+  if (!check_tiu_archive (*bundle, &error))
+    {
+      if (error)
+	{
+	  g_fprintf (stderr, "ERROR: %s\n", error->message);
+	  g_clear_error (&error);
+	}
+      else
+	g_fprintf (stderr, "ERROR: checking the archive failed!\n");
+      return FALSE;
+    }
+
+  if (!mount_tiu_archive (*bundle, &error))
+    {
+      if (error)
+	{
+	  g_fprintf (stderr, "ERROR: %s\n", error->message);
+	  g_clear_error (&error);
+	}
+      else
+	g_fprintf (stderr, "ERROR: mounting the archive failed!\n");
+      return FALSE;
+    }
+
+  return TRUE;
+}
+
 int
 main(int argc, char **argv)
 {
@@ -113,7 +157,7 @@ main(int argc, char **argv)
       exit (0);
     }
 
-  if (argc < 1)
+  if (argc <= 1)
     {
       g_fprintf (stderr, "ERROR: no argument given!\n");
       exit (1);
@@ -147,10 +191,35 @@ main(int argc, char **argv)
     }
   else if (strcmp (argv[1], "extract") == 0)
     {
+      TIUBundle *bundle = NULL;
+
       if (squashfs_file == NULL)
 	{
-	  fprintf (stderr, "ERROR: no tiu archive as input specified!\n");
-	  exit (1);
+	  econf_file *key_file = NULL;
+	  econf_err ecerror;
+	  ecerror = econf_readDirs (&key_file,
+				    "/usr/share/tiu",
+				    "/etc",
+				    "tiu",
+				    "conf",
+				    "=", "#");
+	  /* XXX error handling */
+
+	  /* Try at first special "extract" group, if not set, use "global" */
+	  ecerror = econf_getStringValue(key_file, "extract",
+					 "archive", &squashfs_file);
+
+	  if (ecerror != ECONF_SUCCESS)
+	    ecerror = econf_getStringValue(key_file, "global",
+					   "archive", &squashfs_file);
+
+	  econf_free (key_file);
+
+	  if (squashfs_file == NULL)
+	    {
+	      fprintf (stderr, "ERROR: no tiu archive as input specified!\n");
+	      exit (1);
+	    }
 	}
 
       if (target_dir == NULL)
@@ -165,8 +234,10 @@ main(int argc, char **argv)
 	  exit (1);
 	}
 
+      if (!download_check_mount (squashfs_file, &bundle))
+      	exit (1);
 
-      if (!extract_image(squashfs_file, target_dir, &error))
+      if (!extract_image(bundle, target_dir, &error))
 	{
 	  if (error)
 	    {
@@ -177,9 +248,12 @@ main(int argc, char **argv)
 	    g_fprintf (stderr, "ERROR: extracting the archive failed!\n");
 	  exit (1);
 	}
+      /* XXX free bundle */
     }
   else if (strcmp (argv[1], "install") == 0)
     {
+      TIUBundle *bundle = NULL;
+
       if (squashfs_file == NULL)
 	{
 	  econf_file *key_file = NULL;
@@ -193,10 +267,12 @@ main(int argc, char **argv)
 	  /* XXX error handling */
 
 	  /* Try at first special "install" group, if not set, use "global" */
-	  ecerror = econf_getStringValue(key_file, "install", "archive", &squashfs_file);
+	  ecerror = econf_getStringValue(key_file, "install",
+					 "archive", &squashfs_file);
 
 	  if (ecerror != ECONF_SUCCESS)
-	    ecerror = econf_getStringValue(key_file, "global", "archive", &squashfs_file);
+	    ecerror = econf_getStringValue(key_file, "global",
+					   "archive", &squashfs_file);
 
 	  econf_free (key_file);
 
@@ -213,7 +289,10 @@ main(int argc, char **argv)
 	  exit (1);
 	}
 
-      if (!install_system (squashfs_file, device, &error))
+      if (!download_check_mount (squashfs_file, &bundle))
+	exit (1);
+
+      if (!install_system (bundle, device, &error))
 	{
 	  if (error)
 	    {
@@ -224,9 +303,12 @@ main(int argc, char **argv)
 	    g_fprintf (stderr, "ERROR: installation of the archive failed!\n");
 	  exit (1);
 	}
+      /* XXX free bundle */
     }
   else if (strcmp (argv[1], "update") == 0)
     {
+      TIUBundle *bundle = NULL;
+
       if (squashfs_file == NULL)
 	{
 	  econf_file *key_file = NULL;
@@ -254,7 +336,10 @@ main(int argc, char **argv)
 	    }
 	}
 
-      if (!update_system (squashfs_file, &error))
+      if (!download_check_mount (squashfs_file, &bundle))
+	exit (1);
+
+      if (!update_system (bundle, &error))
 	{
 	  if (error)
 	    {
@@ -262,9 +347,10 @@ main(int argc, char **argv)
 	      g_clear_error (&error);
 	    }
 	  else
-	    g_fprintf (stderr, "ERROR: installation of the archive failed!\n");
+	    g_fprintf (stderr, "ERROR: system update failed!\n");
 	  exit (1);
 	}
+      /* XXX free bundle */
     }
   else
     {

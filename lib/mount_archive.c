@@ -6,6 +6,7 @@
 #include <gio/gfiledescriptorbased.h>
 #include <linux/loop.h>
 
+#include "tiu.h"
 #include "tiu-internal.h"
 #include "dm.h"
 

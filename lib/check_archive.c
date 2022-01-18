@@ -8,6 +8,7 @@
 #include <glib/gstdio.h>
 #include <gio/gfiledescriptorbased.h>
 
+#include "tiu.h"
 #include "tiu-internal.h"
 #include "verity_hash.h"
 #include "network.h"
@@ -332,69 +333,28 @@ check_manifest(const tiu_manifest *mf, GError **error __attribute__((unused)))
 }
 
 gboolean
-check_tiu_archive(const gchar *tiuname, TIUBundle **bundle, GError **error)
+check_tiu_archive(TIUBundle *bundle, GError **error)
 {
-  const gchar *cachedir = "/var/cache/tiu";
   GError *ierror = NULL;
   g_autoptr(GFile) tiufile = NULL;
   g_autoptr(GFileInfo) tiuinfo = NULL;
-  g_autoptr(TIUBundle) ibundle = g_new0(TIUBundle, 1);
   g_autoptr(GBytes) manifest_bytes = NULL;
   guint64 manifest_size;
   goffset offset;
 
-  gchar *tiuscheme = g_uri_parse_scheme(tiuname);
-
-  if (is_remote_scheme(tiuscheme))
-    {
-      ibundle->origpath = g_strdup(tiuname);
-      ibundle->path = g_build_filename(cachedir, "tiu", NULL);
-
-      if (g_mkdir_with_parents(cachedir, 0700) != 0)
-	{
-	  g_set_error(error, G_FILE_ERROR, G_FILE_ERROR_FAILED,
-                      "Failed creating cache directory '%s'", cachedir);
-          return FALSE;
-	}
-
-      if (debug_flag)
-	g_printf("Remote URI detected, downloading tiu archive to '%s'...\n", ibundle->path);
-
-      if (!network_init(&ierror))
-	{
-	  g_propagate_error(error, ierror);
-	  return FALSE;
-	}
-
-      /* Make sure the file does not exist in the cache */
-      g_remove (ibundle->path);
-      if (!download_file(ibundle->path, ibundle->origpath,
-			 DEFAULT_MAX_DOWNLOAD_SIZE, &ierror))
-	{
-	  g_propagate_prefixed_error(error, ierror, "Failed to download tiu archive %s: ", ibundle->origpath);
-	  return FALSE;
-	}
-      if (debug_flag)
-	g_printf("Downloaded tiu archive to '%s'\n", ibundle->path);
-    }
-  else
-    {
-      ibundle->path = g_strdup(tiuname);
-    }
-
   if (debug_flag)
     g_printf("Verifying tiu payload...\n");
 
-  tiufile = g_file_new_for_path(ibundle->path);
-  ibundle->stream = G_INPUT_STREAM(g_file_read(tiufile, NULL, &ierror));
-  if (ibundle->stream == NULL)
+  tiufile = g_file_new_for_path(bundle->path);
+  bundle->stream = G_INPUT_STREAM(g_file_read(tiufile, NULL, &ierror));
+  if (bundle->stream == NULL)
     {
       g_propagate_prefixed_error(error, ierror,
                                 "Failed to open tiu image for reading: ");
       return FALSE;
     }
 
-  int fd = g_file_descriptor_based_get_fd(G_FILE_DESCRIPTOR_BASED(ibundle->stream));
+  int fd = g_file_descriptor_based_get_fd(G_FILE_DESCRIPTOR_BASED(bundle->stream));
 
   if (!check_access(fd, &ierror))
     {
@@ -402,7 +362,7 @@ check_tiu_archive(const gchar *tiuname, TIUBundle **bundle, GError **error)
       return FALSE;
     }
 
-  tiuinfo = g_file_input_stream_query_info(G_FILE_INPUT_STREAM(ibundle->stream),
+  tiuinfo = g_file_input_stream_query_info(G_FILE_INPUT_STREAM(bundle->stream),
 					   G_FILE_ATTRIBUTE_STANDARD_TYPE,
 					   NULL, &ierror);
   if (tiuinfo == NULL)
@@ -419,7 +379,7 @@ check_tiu_archive(const gchar *tiuname, TIUBundle **bundle, GError **error)
       return FALSE;
     }
 
-  if (!input_stream_check_tiu_identifier(ibundle->stream, &ierror))
+  if (!input_stream_check_tiu_identifier(bundle->stream, &ierror))
     {
       g_propagate_prefixed_error(error, ierror,
 				 "Failed to check tiu archive identifier: ");
@@ -427,16 +387,16 @@ check_tiu_archive(const gchar *tiuname, TIUBundle **bundle, GError **error)
     }
 
   offset = sizeof(manifest_size);
-  if (!g_seekable_seek(G_SEEKABLE(ibundle->stream),
+  if (!g_seekable_seek(G_SEEKABLE(bundle->stream),
 		       -offset, G_SEEK_END, NULL, &ierror))
     {
       g_propagate_prefixed_error(error, ierror,
 				 "Failed to seek to end of tiu archive: ");
       return FALSE;
     }
-  offset = g_seekable_tell(G_SEEKABLE(ibundle->stream));
+  offset = g_seekable_tell(G_SEEKABLE(bundle->stream));
 
-  if (!input_stream_read_uint64_all(ibundle->stream, &manifest_size, NULL, &ierror))
+  if (!input_stream_read_uint64_all(bundle->stream, &manifest_size, NULL, &ierror))
     {
       g_propagate_prefixed_error(error, ierror,
 				 "Failed to read manifest size from tiu archive: ");
@@ -467,9 +427,9 @@ check_tiu_archive(const gchar *tiuname, TIUBundle **bundle, GError **error)
     }
 
   offset -= manifest_size;
-  ibundle->size = offset;
+  bundle->size = offset;
 
-  if (!g_seekable_seek(G_SEEKABLE(ibundle->stream),
+  if (!g_seekable_seek(G_SEEKABLE(bundle->stream),
 		       offset, G_SEEK_SET, NULL, &ierror))
     {
       g_propagate_prefixed_error(error, ierror,
@@ -480,7 +440,7 @@ check_tiu_archive(const gchar *tiuname, TIUBundle **bundle, GError **error)
   if (debug_flag)
     g_printf("Read manifest data...\n");
 
-  if (!input_stream_read_bytes_all(ibundle->stream, &ibundle->sigdata, manifest_size,
+  if (!input_stream_read_bytes_all(bundle->stream, &bundle->sigdata, manifest_size,
 				   NULL, &ierror))
     {
       g_propagate_prefixed_error(error, ierror,
@@ -498,7 +458,7 @@ check_tiu_archive(const gchar *tiuname, TIUBundle **bundle, GError **error)
       return FALSE;
     }
 
-  res = cms_get_cert_chain(cms, store, &ibundle->verified_chain, &ierror);
+  res = cms_get_cert_chain(cms, store, &bundle->verified_chain, &ierror);
   if (!res) {
     g_propagate_error(error, ierror);
     goto out;
@@ -507,7 +467,7 @@ check_tiu_archive(const gchar *tiuname, TIUBundle **bundle, GError **error)
   X509_STORE_free(store);
   CMS_ContentInfo_free(cms);
 #else
-  manifest_bytes = ibundle->sigdata;
+  manifest_bytes = bundle->sigdata;
 #endif
 
   if (manifest_bytes == NULL)
@@ -516,7 +476,7 @@ check_tiu_archive(const gchar *tiuname, TIUBundle **bundle, GError **error)
       return FALSE;
     }
 
-  if (!convert_manifest_from_mem(manifest_bytes, &ibundle->manifest,
+  if (!convert_manifest_from_mem(manifest_bytes, &bundle->manifest,
 				 &ierror))
     {
       g_propagate_prefixed_error(error, ierror,
@@ -524,15 +484,15 @@ check_tiu_archive(const gchar *tiuname, TIUBundle **bundle, GError **error)
       return FALSE;
     }
 
-  if (!check_manifest(ibundle->manifest, &ierror))
+  if (!check_manifest(bundle->manifest, &ierror))
     {
       g_propagate_error(error, ierror);
       return FALSE;
     }
 
-  guint8 *root_digest = r_hex_decode(ibundle->manifest->verity_hash, 32);
-  guint8 *salt = r_hex_decode(ibundle->manifest->verity_salt, 32);
-  off_t data_size = ibundle->size - ibundle->manifest->verity_size;
+  guint8 *root_digest = r_hex_decode(bundle->manifest->verity_hash, 32);
+  guint8 *salt = r_hex_decode(bundle->manifest->verity_salt, 32);
+  off_t data_size = bundle->size - bundle->manifest->verity_size;
   g_assert(root_digest);
   g_assert(salt);
   g_assert(data_size % 4096 == 0);
@@ -546,8 +506,6 @@ check_tiu_archive(const gchar *tiuname, TIUBundle **bundle, GError **error)
 		  "bundle payload is corrupted");
       return FALSE;
     }
-
-  *bundle = g_steal_pointer(&ibundle);
 
   return TRUE;
 }
