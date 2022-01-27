@@ -4,9 +4,6 @@ set -e
 
 ROOTDIR=/mnt
 
-# update-alternatives, will be replaced with libalternatives
-cp -av ${ROOTDIR}/usr/share/factory/etc/alternatives ${ROOTDIR}/etc/
-
 # We need the root account and systemd users in initramfs
 chroot ${ROOTDIR} systemd-sysusers system-user-root.conf
 chroot ${ROOTDIR} systemd-sysusers system-group-hardware.conf
