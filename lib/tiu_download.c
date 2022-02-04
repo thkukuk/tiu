@@ -44,7 +44,9 @@ download_tiu_archive (const gchar *tiuname, struct TIUBundle **bundle, GError **
   else if (is_remote_scheme(tiuscheme))
     {
       (*bundle)->origpath = g_strdup(tiuname);
-      (*bundle)->path = g_build_filename(cachedir, "tiu", NULL);
+      gchar *tiu_basename = g_path_get_basename(tiuname);
+      (*bundle)->path = g_build_filename(cachedir, tiu_basename, NULL);
+      free (tiu_basename);
 
       if (g_mkdir_with_parents(cachedir, 0700) != 0)
         {
