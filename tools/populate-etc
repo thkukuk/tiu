@@ -8,7 +8,7 @@ ROOTDIR=/mnt
 chroot ${ROOTDIR} systemd-sysusers system-user-root.conf
 chroot ${ROOTDIR} systemd-sysusers system-group-hardware.conf
 for i in ${ROOTDIR}/usr/lib/sysusers.d/systemd*.conf; do
-    chroot ${ROOTDIR} systemd-sysusers $(basename i)
+    chroot ${ROOTDIR} systemd-sysusers $(basename $i)
 done
 
 mkdir -p ${ROOTDIR}/etc/sysconfig
