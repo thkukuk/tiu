@@ -11,4 +11,5 @@ umount ${ROOTDIR}/usr
 mount -o subvol=/@/usr/.snapshots/1/snapshot ${ROOTDEV} ${ROOTDIR}/usr
 btrfs property set ${ROOTDIR}/usr/ ro false
 sed -i -e 's|subvol=/@/usr|subvol=/@/usr/.snapshots/1/snapshot,ro|g' ${ROOTDIR}/etc/fstab
-echo "${ROOTDEV}  /usr/.snapshots         btrfs  subvol=/@/usr/.snapshots       0  0" >> ${ROOTDIR}/etc/fstab
+# The x-initrd.mount is a workaround for bsc#1156421#c16
+echo "${ROOTDEV}  /usr/.snapshots         btrfs  subvol=/@/usr/.snapshots,x-initrd.mount       0  0" >> ${ROOTDIR}/etc/fstab
