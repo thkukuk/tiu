@@ -45,13 +45,18 @@ for i in "${ROOTDIR}"/usr/lib/modules/* ; do
     for f in .vmlinuz.hmac System.map sysctl.conf vmlinuz; do
         cp -a "${ROOTDIR}/usr/lib/modules/$KVER/$f" "${ROOTDIR}/boot/$f-$KVER"
     done
-    chroot ${ROOTDIR} dracut --kver $KVER >> /var/log/dracut.log 2>&1
+    chroot ${ROOTDIR} dracut --kver "$KVER" >> /var/log/dracut.log 2>&1
 done
 
 # we need /etc/os-release alread now
 ln -sf ../usr/lib/os-release ${ROOTDIR}/etc/os-release
 sed -i -e 's|GRUB_CMDLINE_LINUX_DEFAULT=.*|GRUB_CMDLINE_LINUX_DEFAULT="rw quiet systemd.show_status=1 mitigations=auto \\$ignition_firstboot systemd.log_level=debug"|g' ${ROOTDIR}/etc/default/grub
 echo -e 'SUSE_BTRFS_SNAPSHOT_BOOTING="true"\nGRUB_DISABLE_OS_PROBER="true"' >> ${ROOTDIR}/etc/default/grub
-echo 'LOADER_TYPE="grub2"' > ${ROOTDIR}/etc/sysconfig/bootloader
+if [ -d /sys/firmware/efi ]; then
+	echo 'LOADER_TYPE="grub2-efi"' > ${ROOTDIR}/etc/sysconfig/bootloader
+	echo 'SECURE_BOOT="yes"' >> ${ROOTDIR}/etc/sysconfig/bootloader
+else
+	echo 'LOADER_TYPE="grub2"' > ${ROOTDIR}/etc/sysconfig/bootloader
+fi
 echo -e "${device}\nactivate" > ${ROOTDIR}/etc/default/grub_installdevice
 chroot ${ROOTDIR} pbl --config --install
