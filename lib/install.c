@@ -61,6 +61,12 @@ install_system (TIUBundle *bundle, const gchar *device,
 {
   GError *ierror = NULL;
 
+  if (bundle == NULL)
+    {
+      /* XXX error message */
+      return FALSE;
+    }
+
   if (!exec_script ("/usr/libexec/tiu/setup-disk", device, &ierror))
     {
       g_propagate_error(error, ierror);
