@@ -406,8 +406,20 @@ create_image (const gchar *input, GError **gerror)
 	product_name[i] = '-';
     }
 
+  char *pretty_name = NULL;
+  if ((error = econf_getStringValue (os_release, "", "PRETTY_NAME",
+				     &pretty_name)))
+    {
+      /* XXX g_set_error */
+      fprintf (stderr,
+	       "ERROR: couldn't read \"PRETTY_NAME\" from os-release: %s\n",
+	       econf_errString(error));
+      cleanup (tmpdir);
+      return FALSE;
+    }
+
   if (debug_flag)
-    g_printf("Update version: \"%s-%s\"\n", product_name, version_id);
+    g_printf("Product: \"%s-%s\" (%s)\n", product_name, version_id, pretty_name);
 
   char *product_id = NULL;
   if ((error = econf_getStringValue (os_release, "", "ID",
@@ -468,18 +480,18 @@ create_image (const gchar *input, GError **gerror)
     }
 
   econf_setStringValue(manifest, "global", "ID", product_id);
-  econf_setStringValue(manifest, "global", "ARCH", "x86_64");
-  econf_setStringValue(manifest, "global", "MIN_VERSION", "20210320");
-  econf_setStringValue(manifest, "update", "VERSION", version_id);
-
+  econf_setStringValue(manifest, "global", "ARCH", "x86_64"); /* XXX */
+  econf_setStringValue(manifest, "global", "FULL_NAME", pretty_name);
+  econf_setStringValue(manifest, "global", "NAME", product_name);
+  econf_setStringValue(manifest, "global", "VERSION", version_id);
+  econf_setStringValue(manifest, "update", "MIN_VERSION", "20220101");
+  econf_setStringValue(manifest, "update", "FORMAT", "catar");
+  econf_setStringValue(manifest, "update", "ARCHIVE", pvers_tar);
   econf_writeFile(manifest, tmpdir, "manifest.tiu");
 
   gchar *manifest_file = g_strjoin("/", tmpdir, "manifest.tiu", NULL);
   gchar *output_tiutar = g_strjoin(".", pvers, "tiutar", NULL);
-
-  econf_setStringValue(manifest, "update", "FORMAT", "catar");
-  econf_setStringValue(manifest, "update", "ARCHIVE", pvers_tar);
-  econf_writeFile(manifest, tmpdir, "manifest.tiu");
+  gchar *output_tiuidx = g_strjoin(".", pvers, "tiuidx", NULL);
 
   if (!mksquashfs (manifest_file, pvers_tar, NULL, output_tiutar, gerror))
     {
@@ -487,8 +499,7 @@ create_image (const gchar *input, GError **gerror)
       return FALSE;
     }
 
-  gchar *output_tiuidx = g_strjoin(".", pvers, "tiuidx", NULL);
-
+  /* overwrite some values and create a tiuidx file */
   econf_setStringValue(manifest, "update", "FORMAT", "caidx");
   econf_setStringValue(manifest, "update", "ARCHIVE", pvers_idx);
   econf_writeFile(manifest, tmpdir, "manifest.tiu");
