@@ -13,7 +13,7 @@ A TIU archive consists of:
 * Squashfs image, protected by dm-verity, containing:
   * manifest.tiu
   * casync catar or caidx archive
-* Header
+* Header in ini-style format
   * format
   * dm-verity salt
   * dm-verity hash
