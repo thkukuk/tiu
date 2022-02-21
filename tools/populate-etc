@@ -25,14 +25,19 @@ sed -i -e 's|SNAPPER_CONFIGS=.*|SNAPPER_CONFIGS="root usr"|g' ${ROOTDIR}/etc/sys
 echo "LANG=en_US.UTF-8" > ${ROOTDIR}/etc/locale.conf
 ln -sf /usr/share/zoneinfo/UTC ${ROOTDIR}/etc/localtime
 # Systemd controls the console font now
-echo FONT="eurlatgr.psfu" >> /etc/vconsole.conf
+echo FONT="eurlatgr.psfu" >> ${ROOTDIR}/etc/vconsole.conf
 
-mkdir -p ${ROOTDIR}/etc/systemd/network
+# Use networkd
+#mkdir -p ${ROOTDIR}/etc/systemd/network
 # Enable DHCP on enp*
-cat << EOT > ${ROOTDIR}/etc/systemd/network/enp-dhcp.network
-[Match]
-Name=enp*
+#cat << EOT > ${ROOTDIR}/etc/systemd/network/enp-dhcp.network
+#[Match]
+#Name=enp*
+#
+#[Network]
+#DHCP=yes
+#EOT
 
-[Network]
-DHCP=yes
-EOT
+# Use NetworkManager
+mkdir -p ${ROOTDIR}/etc/sysconfig/network/
+cp -av /etc/sysconfig/network/ifcfg-* ${ROOTDIR}/etc/sysconfig/network/
