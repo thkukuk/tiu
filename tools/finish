@@ -4,6 +4,11 @@ set -e
 
 ROOTDIR=/mnt
 
+# Create /var/log/journal...
+mkdir -p ${ROOTDIR}/var/log/journal
+chmod 2755 ${ROOTDIR}/var/log/journal
+chroot ${ROOTDIR} chown root:systemd-journal /var/log/journal
+
 # Make sure /usr is newer than /etc
 touch ${ROOTDIR}/usr
 
