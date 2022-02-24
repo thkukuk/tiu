@@ -24,8 +24,6 @@ sed -i -e 's|SNAPPER_CONFIGS=.*|SNAPPER_CONFIGS="root usr"|g' ${ROOTDIR}/etc/sys
 # configure locale and timezone
 echo "LANG=en_US.UTF-8" > ${ROOTDIR}/etc/locale.conf
 ln -sf /usr/share/zoneinfo/UTC ${ROOTDIR}/etc/localtime
-# Systemd controls the console font now
-echo FONT="eurlatgr.psfu" >> ${ROOTDIR}/etc/vconsole.conf
 
 # Use networkd
 #mkdir -p ${ROOTDIR}/etc/systemd/network
