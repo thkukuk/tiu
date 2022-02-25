@@ -26,8 +26,8 @@ ln -sf /usr/share/zoneinfo/UTC ${ROOTDIR}/etc/localtime
 
 # Workaround btrfs remount-readonly bug [bsc#1156421#c16]
 # Mount at first read-only volumes, afterwards read-write
-grep "\s/usr\*" ${ROOTDIR}/etc/fstab > ${ROOTDIR}/etc/fstab.new
-grep -v "\s/usr\*" ${ROOTDIR}/etc/fstab >> ${ROOTDIR}/etc/fstab.new
+grep "\s/usr\s" ${ROOTDIR}/etc/fstab > ${ROOTDIR}/etc/fstab.new
+grep -v "\s/usr\s" ${ROOTDIR}/etc/fstab >> ${ROOTDIR}/etc/fstab.new
 mv ${ROOTDIR}/etc/fstab.new ${ROOTDIR}/etc/fstab
 
 # Use networkd
