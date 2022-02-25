@@ -22,6 +22,7 @@ sed -e 's|/mnt/usr|/usr|g' /etc/snapper/configs/usr > ${ROOTDIR}/etc/snapper/con
 sed -i -e 's|SNAPPER_CONFIGS=.*|SNAPPER_CONFIGS="root usr"|g' ${ROOTDIR}/etc/sysconfig/snapper
 
 # configure locale and timezone
+ln -sf /usr/share/factory/etc/locale.conf ${ROOTDIR}/etc/
 ln -sf /usr/share/zoneinfo/UTC ${ROOTDIR}/etc/localtime
 
 # Workaround btrfs remount-readonly bug [bsc#1156421#c16]
