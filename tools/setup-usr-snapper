@@ -4,12 +4,11 @@ set -e
 
 ROOTDIR=/mnt
 
-ROOTDEV=`awk '!/^#/ && ($2 == "/usr") { print $1 }' ${ROOTDIR}/etc/fstab`
+USRDEV=`awk '!/^#/ && ($2 == "/usr") { print $1 }' ${ROOTDIR}/etc/fstab`
 snapper -c usr create-config ${ROOTDIR}/usr
 snapper -c usr create
 umount ${ROOTDIR}/usr
-mount -o subvol=/@/usr/.snapshots/1/snapshot ${ROOTDEV} ${ROOTDIR}/usr
+mount -o subvol=/.snapshots/1/snapshot ${USRDEV} ${ROOTDIR}/usr
 btrfs property set ${ROOTDIR}/usr/ ro false
-sed -i -e 's|subvol=/@/usr|subvol=/@/usr/.snapshots/1/snapshot,ro|g' ${ROOTDIR}/etc/fstab
-# The x-initrd.mount is a workaround for bsc#1156421#c16
-echo "${ROOTDEV}  /usr/.snapshots         btrfs  subvol=/@/usr/.snapshots,x-initrd.mount       0  0" >> ${ROOTDIR}/etc/fstab
+sed -i -e 's|\(.*\s\)/usr\(\s.*\)|\1/usr btrfs  subvol=/.snapshots/1/snapshot,ro,x-initrd.mount 0 0|g' ${ROOTDIR}/etc/fstab
+echo "${USRDEV}  /usr/.snapshots         btrfs  subvol=/.snapshots       0  0" >> ${ROOTDIR}/etc/fstab

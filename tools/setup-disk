@@ -243,9 +243,12 @@ partitions:
           size: 512MiB
           type: efi
         - number: 2
-          size: 8GiB
+          size: 1GiB
           type: linux
         - number: 3
+          size: 6GiB
+          type: linux
+        - number: 4
           size: rest
           type: linux
 
@@ -264,11 +267,13 @@ filesystems:
         - path: srv
         - path: opt
         - path: home
-        - path: usr
-          mount_options: ['x-initrd.mount']
         - path: boot/grub2/i386-pc
         - path: boot/grub2/x86_64-efi
   ${DEVICE1_P3}:
+    filesystem: btrfs
+    mountpoint: /usr
+    mount_options: ['x-initrd.mount']
+  ${DEVICE1_P4}:
     filesystem: btrfs
     mountpoint: /var
     mount_options: ['nodatacow', 'x-initrd.mount']
