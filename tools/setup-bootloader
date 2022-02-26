@@ -50,7 +50,7 @@ done
 
 # we need /etc/os-release alread now
 ln -sf ../usr/lib/os-release ${ROOTDIR}/etc/os-release
-sed -i -e 's|GRUB_CMDLINE_LINUX_DEFAULT=.*|GRUB_CMDLINE_LINUX_DEFAULT="rw quiet systemd.show_status=1 mitigations=auto \\$ignition_firstboot systemd.log_level=debug"|g' ${ROOTDIR}/etc/default/grub
+sed -i -e 's|GRUB_CMDLINE_LINUX_DEFAULT=.*|GRUB_CMDLINE_LINUX_DEFAULT="rw quiet systemd.show_status=1 mitigations=auto \\$ignition_firstboot|g' ${ROOTDIR}/etc/default/grub
 echo -e 'SUSE_BTRFS_SNAPSHOT_BOOTING="true"\nGRUB_DISABLE_OS_PROBER="true"' >> ${ROOTDIR}/etc/default/grub
 if [ -d /sys/firmware/efi ]; then
 	echo 'LOADER_TYPE="grub2-efi"' > ${ROOTDIR}/etc/sysconfig/bootloader
