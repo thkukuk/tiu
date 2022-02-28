@@ -4,11 +4,10 @@ set -e
 
 ROOTDIR=/mnt
 
-USRDEV=`awk '!/^#/ && ($2 == "/usr") { print $1 }' ${ROOTDIR}/etc/fstab`
-snapper -c usr create-config ${ROOTDIR}/usr
+#USRDEV=$(awk '!/^#/ && ($2 == "/usr") { print $1 }' ${ROOTDIR}/etc/fstab)
+snapper -c usr create-config ${ROOTDIR}/os
 snapper -c usr create
-umount ${ROOTDIR}/usr
-mount -o subvol=/.snapshots/1/snapshot ${USRDEV} ${ROOTDIR}/usr
-btrfs property set ${ROOTDIR}/usr/ ro false
-sed -i -e 's|\(.*\s\)/usr\(\s.*\)|\1/usr btrfs  subvol=/.snapshots/1/snapshot,ro,x-initrd.mount 0 0|g' ${ROOTDIR}/etc/fstab
-echo "${USRDEV}  /usr/.snapshots         btrfs  subvol=/.snapshots       0  0" >> ${ROOTDIR}/etc/fstab
+btrfs property set ${ROOTDIR}/os/.snapshots/1/snapshot ro false
+#mount -o subvol=/.snapshots/1/snapshot ${USRDEV} ${ROOTDIR}/usr
+mount -o bind ${ROOTDIR}/os/.snapshots/1/snapshot ${ROOTDIR}/usr
+echo "/usr /os/.snapshots/1/snapshot /usr none bind,ro 0 0" >> ${ROOTDIR}/etc/fstab
