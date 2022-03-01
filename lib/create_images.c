@@ -48,14 +48,14 @@ mksquashfs (const gchar *manifest, const gchar *input1,
                             G_SUBPROCESS_FLAGS_STDOUT_SILENCE, &ierror);
   if (sproc == NULL)
     {
-      g_propagate_prefixed_error(error, ierror, "Failed to start btrfs: ");
+      g_propagate_prefixed_error(error, ierror, "Failed to start mksquashfs: ");
       return FALSE;
     }
 
   if (!g_subprocess_wait_check(sproc, NULL, &ierror))
     {
       g_propagate_prefixed_error(error, ierror,
-                                 "Failed to create btrfs subvolume: ");
+                                 "Failed to create squashfs image: ");
       return FALSE;
     }
 
@@ -68,7 +68,7 @@ rm_dir_content (const gchar *dir, const gchar *tmpdir, GError **error)
   g_autoptr(GFileEnumerator) enumerator = NULL;
 
   GFile *file = g_file_new_for_path (g_strjoin("/", tmpdir,
-					       "btrfs", dir, NULL));
+					       "usr", dir, NULL));
   enumerator = g_file_enumerate_children (file,
 					  G_FILE_ATTRIBUTE_STANDARD_NAME,
                                           G_FILE_QUERY_INFO_NOFOLLOW_SYMLINKS,
@@ -369,7 +369,7 @@ create_image (const gchar *input, GError **gerror)
       return FALSE;
     }
 
-  char *libosrelease = g_strjoin ("/", tmpdir, "btrfs", "lib/os-release", NULL);
+  char *libosrelease = g_strjoin ("/", tmpdir, "usr", "lib/os-release", NULL);
   if ((error = econf_readFile (&os_release, libosrelease, "=", "#")))
     {
       fprintf (stderr, "ERROR: couldn't read os-release: %s\n",
@@ -434,7 +434,7 @@ create_image (const gchar *input, GError **gerror)
     }
 
   /* Create required directories */
-  gchar *dir = g_strjoin("/", tmpdir, "btrfs", ".snapshots", NULL);
+  gchar *dir = g_strjoin("/", tmpdir, "usr", ".snapshots", NULL);
   if (g_mkdir(dir, 0750) != 0)
     {
       g_set_error(gerror, G_FILE_ERROR, G_FILE_ERROR_FAILED,

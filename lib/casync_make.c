@@ -12,7 +12,7 @@ casync_make (const gchar *inputdir, const gchar *outfile,
   GError *ierror = NULL;
   gboolean res = FALSE;
   GPtrArray *args = g_ptr_array_new_full(15, g_free);
-  char *btrfsdir = g_strjoin ("/", inputdir, "btrfs", NULL);
+  char *usrdir = g_strjoin ("/", inputdir, "usr", NULL);
 
   g_ptr_array_add(args, g_strdup("casync"));
   g_ptr_array_add(args, g_strdup("make"));
@@ -25,7 +25,7 @@ casync_make (const gchar *inputdir, const gchar *outfile,
       g_ptr_array_add(args, g_strdup(store));
     }
   g_ptr_array_add(args, g_strdup(outfile));
-  g_ptr_array_add(args, g_strdup(btrfsdir));
+  g_ptr_array_add(args, g_strdup(usrdir));
 
   g_ptr_array_add(args, NULL);
 
