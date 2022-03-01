@@ -8,6 +8,5 @@ ROOTDIR=/mnt
 snapper -c usr create-config ${ROOTDIR}/os
 snapper -c usr create
 btrfs property set ${ROOTDIR}/os/.snapshots/1/snapshot ro false
-#mount -o subvol=/.snapshots/1/snapshot ${USRDEV} ${ROOTDIR}/usr
 mount -o bind ${ROOTDIR}/os/.snapshots/1/snapshot ${ROOTDIR}/usr
-echo "/usr /os/.snapshots/1/snapshot /usr none bind,ro 0 0" >> ${ROOTDIR}/etc/fstab
+echo "/sysroot/os/.snapshots/1/snapshot /usr none bind,ro,x-initrd.mount 0 0" >> ${ROOTDIR}/etc/fstab
