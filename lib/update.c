@@ -137,7 +137,7 @@ adjust_etc_fstab (const gchar *path, const gchar *snapshot_usr, GError **error)
   if (debug_flag)
     g_printf("Adjusting '%s'...\n", fstab);
 
-  gchar *sedarg = g_strjoin(NULL, "s|subvol=/@/usr/.snapshots/.*/snapshot|subvol=/@/usr/.snapshots/",
+  gchar *sedarg = g_strjoin(NULL, "s|subvol=/os/.snapshots/.*/snapshot|subvol=/@/os/.snapshots/",
 			    snapshot_usr, "/snapshot|g", NULL);
 
   g_ptr_array_add(args, "sed");
@@ -380,7 +380,7 @@ update_system (TIUBundle *bundle, GError **error)
       return FALSE;
     }
 
-  gchar *usr_path = g_strjoin("/", "/usr/.snapshots",
+  gchar *usr_path = g_strjoin("/", "/os/.snapshots",
 			      snapshot_usr, "snapshot", NULL);
   if (!btrfs_set_readonly (usr_path, false, &ierror))
     {
