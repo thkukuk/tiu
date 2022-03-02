@@ -273,7 +273,7 @@ filesystems:
   ${DEVICE1_P3}:
     filesystem: btrfs
     mountpoint: /os
-    mount_options: ['x-initrd.mount']
+    mount_options: ['ro','x-initrd.mount']
   ${DEVICE1_P4}:
     filesystem: btrfs
     mountpoint: /var

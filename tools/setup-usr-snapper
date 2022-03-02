@@ -11,4 +11,4 @@ btrfs property set ${ROOTDIR}/os/.snapshots/1/snapshot ro false
 # Create usr subdirectory, so that casync can extract archive
 mkdir -p ${ROOTDIR}/os/.snapshots/1/snapshot/usr
 mount -o bind ${ROOTDIR}/os/.snapshots/1/snapshot/usr ${ROOTDIR}/usr
-echo "/sysroot/os/.snapshots/1/snapshot/usr      /usr                    none   bind,ro,x-initrd.mount         0 0" >> ${ROOTDIR}/etc/fstab
+echo "/sysroot/os/.snapshots/1/snapshot/usr      /usr                    none   bind,ro,x-initrd.mount         0  0" >> ${ROOTDIR}/etc/fstab
