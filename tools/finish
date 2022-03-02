@@ -12,7 +12,8 @@ chroot ${ROOTDIR} chown root:systemd-journal /var/log/journal
 # Make sure /usr is newer than /etc
 touch ${ROOTDIR}/usr
 
-btrfs property set ${ROOTDIR}/usr/ ro true
+# Switch subvolume back to read-only
+btrfs property set ${ROOTDIR}/os/.snapshots/1/snapshot ro true
 
 umount -R ${ROOTDIR}/usr
 
