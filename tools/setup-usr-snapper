@@ -4,10 +4,13 @@ set -e
 
 ROOTDIR=/mnt
 
-#USRDEV=$(awk '!/^#/ && ($2 == "/usr") { print $1 }' ${ROOTDIR}/etc/fstab)
+USRDEV=$(awk '!/^#/ && ($2 == "/os") { print $1 }' ${ROOTDIR}/etc/fstab)
 snapper -c usr create-config ${ROOTDIR}/os
 snapper -c usr create
 btrfs property set ${ROOTDIR}/os/.snapshots/1/snapshot ro false
+
+echo "${USRDEV}  /os/.snapshots          btrfs  subvol=/.snapshots             0  0" >> ${ROOTDIR}/etc/fstab
+
 # Create usr subdirectory, so that casync can extract archive
 mkdir -p ${ROOTDIR}/os/.snapshots/1/snapshot/usr
 mount -o bind ${ROOTDIR}/os/.snapshots/1/snapshot/usr ${ROOTDIR}/usr
