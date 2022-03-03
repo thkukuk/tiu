@@ -380,15 +380,16 @@ update_system (TIUBundle *bundle, GError **error)
       return FALSE;
     }
 
-  gchar *usr_path = g_strjoin("/", "/os/.snapshots",
+  gchar *snapshot_path = g_strjoin("/", "/os/.snapshots",
 			      snapshot_usr, "snapshot", NULL);
-  if (!btrfs_set_readonly (usr_path, false, &ierror))
+  if (!btrfs_set_readonly (snapshot_path, false, &ierror))
     {
       g_propagate_error(error, ierror);
       retval = FALSE;
       goto cleanup;
     }
 
+  gchar *usr_path = g_strjoin("/", snapshot_path, "usr", NULL);
   if (!extract_image(bundle, usr_path, &ierror))
     {
       g_propagate_error(error, ierror);
@@ -399,7 +400,7 @@ update_system (TIUBundle *bundle, GError **error)
   /* touch /usr for systemd */
   utimensat(AT_FDCWD, usr_path, NULL, 0);
 
-  if (!btrfs_set_readonly (usr_path, true, &ierror))
+  if (!btrfs_set_readonly (snapshot_path, true, &ierror))
     {
       g_propagate_error(error, ierror);
       retval = FALSE;
