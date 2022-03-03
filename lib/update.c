@@ -137,7 +137,7 @@ adjust_etc_fstab (const gchar *path, const gchar *snapshot_usr, GError **error)
   if (debug_flag)
     g_printf("Adjusting '%s'...\n", fstab);
 
-  gchar *sedarg = g_strjoin(NULL, "s|subvol=/os/.snapshots/.*/snapshot|subvol=/@/os/.snapshots/",
+  gchar *sedarg = g_strjoin(NULL, "s|^/sysconfig/os/.snapshots/.*/snapshot|/sysconfig/os/.snapshots/",
 			    snapshot_usr, "/snapshot|g", NULL);
 
   g_ptr_array_add(args, "sed");
