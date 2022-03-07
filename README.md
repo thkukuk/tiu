@@ -22,9 +22,8 @@ The installer image is
 [MicroOS-TIU-Installer.x86_64-livecd.iso](https://download.opensuse.org/repositories/home:/kukuk:/tiu/images/iso/MicroOS-TIU-Installer.x86_64-livecd.iso)
 
 The TIU archives can be found at
-https://download.opensuse.org/repositories/home:/kukuk:/tiu/images/repo/tiu/
-But it is normally not necessary to specify this, as it is pre-configured for `tiu`.
-
+https://download.opensuse.org/repositories/home:/kukuk:/tiu/images/repo/tiu/.
+But it is normally not necessary to specify one, as the default TIU archive is pre-configured.
 The full project can be found at https://build.opensuse.org/project/monitor/home:kukuk:tiu
 
 ### Installation
@@ -32,7 +31,7 @@ The full project can be found at https://build.opensuse.org/project/monitor/home
 * Boot the `MicroOS-TIU-Installer.x86_64-livecd.iso`
 * Login as root (no password required)
 * Start the installer: `tiu install -d /dev/<disk>`
-  * `/dev/<disk>` is the device on which tiu will install the system. All content of the disk will be erased!
+  * `/dev/<disk>` is the device on which tiu will install the system. **All content of the disk will be erased!**
 * Reboot
 * During first boot, `ignition` and/or `combustion` will do the first initialization of the system. Documentation about how to create the input data can be found at https://en.opensuse.org/Portal:MicroOS/Ignition
 
@@ -96,33 +95,25 @@ archives:
 ### Building tiu archives
 
 ```
-# tiu create --tar system-update.tar.xz
+# tiu create --tar system.tar.xz
 ```
 
-This will try to create a `btrfs` subvolume in _$TMPDIR_.  If this
-directory is not under a `btrfs` filesystem `tiu` will complain with
-"ERROR: not a btrfs filesystem: /tmp/tiu-workdir-XXXXXXXXXX" message.
-The solution is execute it with a different default directory.
-
-```
-# TMPDIR=/var/cache/tiu tiu create --tar system-update.tar.xz
-```
+`system.tar.xz` is a tar archive which includes the `/usr` directory of the system (`/usr/local` should be empty) and optional `/etc`. The content of the `/etc` directory will be moved to `/usr/share/factory/etc`. 
 
 ### Extracting tiu archive
 
 ```
 # mkdir -p /new/root
-# tiu extract --archive system-update.tiutar --output /new/root
+# tiu extract --archive system.tiutar --output /new/root
 ```
 
 ## Generic Requirements for Updates
 
-* Provide tags to identify, that the update image is compatible with this installation
+* Provide tags to identify, that the update image is compatible with this installation. The details are described in [TIU-ARCHIVE](TIU-ARCHIVE.md)
 * Version number check, allow downgrades?
 * Provide update image from one version to the next one, or all in one?
-  * One version to next one is much smaller as it only contains the differences, but you have to apply all updates in the correct order to come from an old version to the current one
-  * With all updates (or better the full installation) in one image, you can update from every version to the current one. But how to update efficient without transferring too much data?
-  * SOLUTION: use casync.
+  * Since we work with images and provide full images, this doesn't matter, we can always update von any state to the current one as long as the real root including the `/etc` directory and layout stay compatible.
+  * Use [casync](https://github.com/systemd/casync):
     * USB Sticks and container will have the full image in catar format, so we can update from every released version to the current one.
     * OTA: always download caidx file (inside tiuidx archive), fetch only required blocks
 * Image needs to be signed
@@ -137,24 +128,24 @@ following options:
   * minus: does not allow IMA/EVM
 * `/etc` is an own, writeable subvolume
   * plus: root filesystem is still read-only
-  * minus: I was not able to mount `/etc` before systemd needs it writeable.
-* We follow usrMove, which means we have a read-write root filesystem and the real data is only part of `/boot` and `/usr`.
+  * minus: It seems it's not possible to mount `/etc` before systemd needs it writeable.
+* We follow usrMove, which means we have a read-write root filesystem and the real data is only part of `/usr`.
   * plus: root filesystem is read-write and allows easier changes like creating additional directories
   * minus:
     * root filesysem is read-write and allows changes
-    * rollback of two independent volumes is not possible
 
 ## Requirements for distribution/RPMs
 
 ### RPM %pre/%post install scripts
 
-The %pre/%post install scripts will only be executed when building the master image. Not when the image get's deployed or updated. So update code will never be executed. Changes to /etc, /var or anything else outside /usr and /boot will be deleted or overwritten.
+The %pre/%post install scripts will only be executed when building the master image. Not when the image get's deployed or updated. So update code will never be executed. Changes to `/etc`, `/var` or anything else outside `/usr` will be deleted or overwritten.
 
 ### RPM filelist
 
-RPMs should only contain files in `/usr` and for the moment in `/boot`. Files outside this two directories are not updateable and will always stay at the version of the image with which the System was installed first. %ghost entries for `/etc`, `/var`, `/run` and similar directories don't make any sense, as RPM is never executed to remove such packages with an update and the files will stay.
+RPMs should only contain files in `/usr`. Files outside this directory are not install- or updateable with the image and have to be generated or adjusted during the first boot of the new image with e.g. `tmpfiles.d`, `sysusers.d` or special systemd services.
+%ghost entries for `/etc`, `/var`, `/run` and similar directories don't make any sense, as RPM is never executed to remove such packages with an update and the files will stay.
 
-Distribution specific configuration files have to stay in `/usr`, e.g. `/usr/etc`, `/usr/share/<package>` or similar locations. `/etc` is only for host specific configuration files and admin made changes. See `systemd`, `dbus-1` or `libeconf` as examples how services should merge the configuration snippets during start.
+Distribution specific configuration files have to stay in `/usr`, e.g. `/usr/etc`, `/usr/share/<package>` or similar locations. `/etc` is only for host specific configuration files and admin made changes. See `systemd` or `[libeconf](https://github.com/openSUSE/libeconf)` as examples how services should merge the configuration snippets during start.
 
 All files in `/etc` have to be generated or adjusted during first image installation by the `image installer` or during boot by systemd services, either unit files or `sysusers.d` and `tmpfiles.d` configuration files.
 `tmpfiles.d` is also to be used to populate `/var` and `/run`.
@@ -164,10 +155,10 @@ All files in `/etc` have to be generated or adjusted during first image installa
 System accounts can only be created with systemd-sysusers (sysusers.d.5).
 They will be created during the next boot after an update.
 
-This means, that the update-image is not allowed to have files owned
-by a new user. Best is, if all files are owned by root.
+This means, that the image is not allowed to have files owned
+by a new user. Best if all files are only owned by root.
 
-Since files in /var or /run are not packaged in the image, but created
+Since files in `/var` or `/run` are not packaged in the image, but created
 by systemd-tmpfiles (tmpfiles.d.5) during the next reboot, they can be
 owned by a different system user than root.
 
@@ -182,21 +173,3 @@ are some bugs preventing the usage without workarounds:
 
 * [Implicit seed of pre-existing output breaks with 'Stale file handle' error when reflinking #240](https://github.com/systemd/casync/issues/240)
 * [Extracting in root of mounted btrfs filesystem fails with "Failed to run synchronizer: File exists" #248](https://github.com/systemd/casync/issues/248) - This one can be workarounded by package the tree as btrfs subvolume already.
-
-
-## TODO
-
-- [x] Build image as tar archive from MicroOS RPMs in OBS
-- [x] Create manifest which defines:
-  - [x] ID of OS which is updateable (/etc/os-release)
-  - [x] Supported architecture
-  - [x] Minimum version of OS which can be updated
-  - [x] Version of update
-  - [ ] Digest of image (casync digest)
-- [ ] Verify that the format is really secure
-- [x] Use dm-verity (see RAUC)
-- [x] Build tiutar archive (squashfs image with manifest and catar archive)
-- [x] Build tiuidx archive (swuashfs image with manifest and caidx file, store available via http/https)
-- [ ] SELinux (installs in /etc and /var)
-- [x] Kernel update incl. rebuilding initrd
-- [x] Bootloader update
