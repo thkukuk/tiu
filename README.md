@@ -1,6 +1,8 @@
 # TIU - Transactional Image Update
 
-This project aims to provide a robust update infrastructure for [opensuse MicroOS](https://microos.opensuse.org) based on btrfs and images and not packages (RPMs).
+This project aims to provide a robust update infrastructure for [opensuse
+MicroOS](https://microos.opensuse.org) based on btrfs and images and not
+packages (RPMs).
 
 There are two key requirements for allowing robust updates of a system:
 
@@ -8,6 +10,35 @@ There are two key requirements for allowing robust updates of a system:
 2. Atomicity: Writing the update to a currently inactive device is a critical operation. A failure occurring during this installation must not brick the device. The operation that switches the boot device must be atomic itself and only happen as the update was written error free.
 
 Additional, no unauthorized entity should be able to update your device. There must be a secure channel to transfer the update and the update needs to be signed which allows to verify its author.
+
+## Usage
+
+### Installer image and update archives
+
+There is a ready-to-use installer image with tiu and there are update archives
+in the openSUSE Build Service.
+
+The installer image is
+[MicroOS-TIU-Installer.x86_64-livecd.iso](https://download.opensuse.org/repositories/home:/kukuk:/tiu/images/iso/MicroOS-TIU-Installer.x86_64-livecd.iso)
+
+The TIU archives can be found at
+https://download.opensuse.org/repositories/home:/kukuk:/tiu/images/repo/tiu/
+But it is normally not necessary to specify this, as it is pre-configured for `tiu`.
+
+The full project can be found at https://build.opensuse.org/project/monitor/home:kukuk:tiu
+
+### Installation
+
+* Boot the `MicroOS-TIU-Installer.x86_64-livecd.iso`
+* Login as root (no password required)
+* Start the installer: `tiu install -d /dev/<disk>`
+  * `/dev/<disk>` is the device on which tiu will install the system. All content of the disk will be erased!
+* Reboot
+* During first boot, `ignition` and/or `combustion` will do the first initialization of the system. Documentation about how to create the input data can be found at https://en.opensuse.org/Portal:MicroOS/Ignition
+
+### Update
+
+From the running system call `tiu update`.
 
 ## TIU
 
