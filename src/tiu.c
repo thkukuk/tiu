@@ -151,6 +151,10 @@ main(int argc, char **argv)
       exit (1);
     }
 
+  /* If debug is choosen, enable verbose logs, too */
+  if (debug_flag)
+    verbose_flag = 1;
+
   if (version)
     {
       g_print("TIU - Transactional Image Update Version %s\n", "0.1");
@@ -278,19 +282,21 @@ main(int argc, char **argv)
 
 	  if (squashfs_file == NULL)
 	    {
-	      fprintf (stderr, "ERROR: no tiu archive as input specified!\n");
+	      g_fprintf (stderr, "ERROR: no tiu archive as input specified!\n");
 	      exit (1);
 	    }
 	}
 
       if (device == NULL)
 	{
-	  fprintf (stderr, "ERROR: no device for installation specified!\n");
+	  g_fprintf (stderr, "ERROR: no device for installation specified!\n");
 	  exit (1);
 	}
 
       if (!download_check_mount (squashfs_file, &bundle))
 	exit (1);
+
+      /* XXX g_printf("Installing */
 
       if (!install_system (bundle, device, &error))
 	{

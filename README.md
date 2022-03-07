@@ -138,6 +138,11 @@ will be created. `/etc/fstab` in the new snapshot is adjusted to point to the
 new snapshot of `/os`, so initial it points to
 `/os/.snapshots/1/snapshot/usr`.
 
+During first installation and update, the kernel and bootloader configuration
+will be copied to `/boot`. During an update, the old kernel will be
+removed. As `/boot` is part of the root subvolume, every snapshot contains so
+exactly one kernel version for boot.
+
 Due to bugs in casync the directory where the OS is stored needs to be a real
 directory and no btrfs subvolume. Since we cannot mount directories directly,
 we have to bind mount `/os/.snapshots/[NR]/snapshot/usr` to `/usr` in the
@@ -173,6 +178,14 @@ following options:
   * plus: root filesystem is read-write and allows easier changes like creating additional directories
   * minus:
     * root filesysem is read-write and allows changes
+
+### Layout outside `/usr`
+
+The directories and files outside `/usr` are not part of the image and thus
+needs to be created during installation.
+The partition and filesystem layout is done by `setup-disk`, which uses
+libstorage-ng to do the first setup. The initial symlinks for `/lib`, `/bin`
+and similar are created by tiu.
 
 ## Requirements for distribution/RPMs
 
