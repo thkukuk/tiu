@@ -98,7 +98,7 @@ archives:
 # tiu create --tar system.tar.xz
 ```
 
-`system.tar.xz` is a tar archive which includes the `/usr` directory of the system (`/usr/local` should be empty) and optional `/etc`. The content of the `/etc` directory will be moved to `/usr/share/factory/etc`. 
+`system.tar.xz` is a tar archive which includes the `/usr` directory of the system (`/usr/local` should be empty) and optional `/etc`. The content of the `/etc` directory will be moved to `/usr/share/factory/etc`.
 
 ### Extracting tiu archive
 
@@ -121,7 +121,47 @@ archives:
 
 ## Filesystem Layout
 
-`systemd` requires `/etc` writeable from the very beginning. This leaves the
+### Generic Layout
+
+#### btrfs
+
+The following Partitions are necessary:
+* `/` the root filesystem, btrfs
+* `/boot/efi` for EFI firmware, vfat
+* `/os` partition containing the data for `/usr`, btrfs
+
+Optional, but highly recommended:
+* `/var` to make sure, that especially containerized workload and `/var/cache` do not eat up all disk space of the root filesystem. No specific requirements for the filesystem.
+
+For the first installation and for every update, a snapshot of `/` and `/os`
+will be created. `/etc/fstab` in the new snapshot is adjusted to point to the
+new snapshot of `/os`, so initial it points to
+`/os/.snapshots/1/snapshot/usr`.
+
+Due to bugs in casync the directory where the OS is stored needs to be a real
+directory and no btrfs subvolume. Since we cannot mount directories directly,
+we have to bind mount `/os/.snapshots/[NR]/snapshot/usr` to `/usr` in the
+initrd.
+
+For the first intallation, `/@/.snapshots/1/snapshot` is the default root
+filesystem and `/os/.snapshots/1/snapshot/usr` will be bind mount to
+`/usr`. After the first update, `/@/.snapshots/2/snapshot` will become the
+default root filesystem and `/os/.snapshots/2/snapshot/usr` will be bind mount
+to `/usr`.
+While the snapshot numbers of `/` and `/os` will be most likely in sync, they
+don't need so.
+
+If a snapshot in `/@/.snapshots` get's removed during cleanup, we have to read
+the `fstab` entry for `/usr` of that snapshot and delete the corresponding
+snapshot in /os.
+
+#### /usrA and /usrB
+
+TBD.
+
+### `/etc`
+
+systemd requires `/etc` writeable from the very beginning. This leaves the
 following options:
 * `/etc` is part of the read-only root filesystem and made writeable via overlayfs
   * plus: works like today with transactional-update
