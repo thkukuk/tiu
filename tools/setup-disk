@@ -280,15 +280,29 @@ filesystems:
     mount_options: ['nodatacow', 'x-initrd.mount']
 """
 
+def _log_storage_milestone(message):
+    storage.get_logger().write(storage.LogLevel_MILESTONE,
+                               "tiu", __file__, sys._getframe(1).f_lineno,
+                               "", message)
+
+def _log_storage_error(error_msg):
+    storage.get_logger().write(storage.LogLevel_ERROR,
+                               "tiu", __file__, sys._getframe(1).f_lineno,
+                               "", error_msg)
+
+def _raise_exception(error_msg):
+    _log_storage_error(error_msg)
+    raise Exception(error_msg)
 
 class MyCommitCallbacks(storage.CommitCallbacks):
     def message(self, message):
+        _log_storage_milestone(message)
         print(f"message '{message}'")
 
     def error(self, message, what):
+        _log_storage_error(f"'{message}' '{what}'")
         print(f"error '{message}' '{what}'")
         return False
-
 
 def _resolve_devices(devices, layout):
     """Resolve device and partition names in a template."""
@@ -315,7 +329,7 @@ def _resolve_devices(devices, layout):
     try:
         layout = string.Template(layout).substitute(mapping)
     except KeyError as e:
-        raise Exception(f"Device {e} cannot be mapped in the layout")
+        _raise_exception(f"Device {e} cannot be mapped in the layout")
 
     return layout
 
@@ -337,12 +351,12 @@ def _size(size):
 
     match = re.match(r"(\d+)\s*(\w+)", size)
     if not match:
-        raise Exception(f"Size {size} not recognized")
+        _raise_exception(f"Size {size} not recognized")
 
     size, unit = match.groups()
     unit = "B" if not unit else unit
     if unit not in units:
-        raise Exception(f"Unit {unit} not recognized")
+        _raise_exception(f"Unit {unit} not recognized")
 
     return int(size) * units[unit]
 
@@ -352,7 +366,7 @@ def _prepare_disk(devicegraph, name):
     # TODO check for thing that cannot be deleted, e.g. multipath
     disk = storage.Disk.find_by_name(devicegraph, name)
     if not disk:
-        raise Exception(f"Device {name} not found!")
+        _raise_exception(f"Device {name} not found!")
 
     disk.remove_descendants()
     return disk
@@ -367,7 +381,7 @@ def _partition_table(disk, label):
     }
 
     if label not in labels:
-        raise Exception(f"Partition label {label} not recognized")
+        _raise_exception(f"Partition label {label} not recognized")
 
     part_type, convert = labels[label]
     part_table = convert(disk.create_partition_table(part_type))
@@ -394,7 +408,7 @@ def _create_partition(table, size):
         )
         return partition
 
-    raise Exception("No suitable partition slot found!")
+    _raise_exception("No suitable partition slot found!")
 
 
 def _partition(disk, label, partitions):
@@ -413,15 +427,15 @@ def _partition(disk, label, partitions):
     for index, partition in enumerate(partitions, start=1):
         number = partition.get("number", index)
         if index != number:
-            raise Exception(f"Expected partition number {number} instead of {index}")
+            _raise_exception(f"Expected partition number {number} instead of {index}")
 
         if "size" not in partition:
-            raise Exception(f"Partition {number} has missing 'size'")
+            _raise_exception(f"Partition {number} has missing 'size'")
         part = _create_partition(table, _size(partition["size"]))
 
         type_ = partition.get("type", "linux")
         if type_ not in ids:
-            raise Exception(f"Type {type_} not valid for partition {number}")
+            _raise_exception(f"Type {type_} not valid for partition {number}")
 
         for id_ in ids[type_]:
             part.set_id(id_)
@@ -468,7 +482,7 @@ def _filesystem(partition, filesystem):
 
     fs = filesystem.get("filesystem", "btrfs")
     if fs not in filesystems:
-        raise Exception(f"Filesystem {fs} not recognized")
+        _raise_exception(f"Filesystem {fs} not recognized")
 
     fs_type, convert = filesystems[fs]
     fs_ = convert(partition.create_filesystem(fs_type))
@@ -509,10 +523,10 @@ def setup_disks(layout):
     try:
         devices = layout["partitions"]["devices"]
     except KeyError:
-        raise Exception("Section 'devices' not found in the layout")
+        _raise_exception("Section 'devices' not found in the layout")
 
     if not devices:
-        raise Exception("Section 'devices' is empty")
+        _raise_exception("Section 'devices' is empty")
 
     for device, partitions in devices.items():
         label = partitions.get("label", label_default)
@@ -524,10 +538,10 @@ def setup_disks(layout):
     try:
         filesystems = layout["filesystems"]
     except KeyError:
-        raise Exception("Section 'filesystems' not found in the layout")
+        _raise_exception("Section 'filesystems' not found in the layout")
 
     if not filesystems:
-        raise Exception("Section 'filesystems' is empty")
+        _raise_exception("Section 'filesystems' is empty")
 
     for partition, filesystem in filesystems.items():
         part = storage.Partition.find_by_name(staging, partition)

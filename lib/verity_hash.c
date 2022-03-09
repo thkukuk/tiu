@@ -24,6 +24,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <glib.h>
+#include <inttypes.h>
 
 #include <openssl/bio.h>
 #include <openssl/err.h>
