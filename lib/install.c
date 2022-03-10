@@ -20,21 +20,33 @@
 
 #include "tiu.h"
 #include "tiu-internal.h"
+#include "tiu-errors.h"
 
 static gboolean
-exec_script (const gchar *script, const gchar *device, GError **error)
+exec_script (const gchar *script, const gchar *device, GError **error,
+	     const gchar *logfile)
 {
   g_autoptr (GSubprocess) sproc = NULL;
   GError *ierror = NULL;
   GPtrArray *args = g_ptr_array_new_full(8, g_free);
 
   if (debug_flag)
-    g_printf("Running script '%s' for device '%s'...\n",
-	     script, device);
+    {
+      g_printf("Running script '%s' for device '%s'...\n",
+	       script, device);
+      if (strlen(logfile) > 0)
+	g_printf("Output will be written to: %s\n",
+		 logfile);
+    }
 
   g_ptr_array_add(args, g_strdup(script));
   g_ptr_array_add(args, "-d");
   g_ptr_array_add(args, g_strdup(device));
+  if (strlen(logfile) > 0)
+    {
+       g_ptr_array_add(args, "-o");
+       g_ptr_array_add(args, g_strdup(logfile));
+    }
   g_ptr_array_add(args, NULL);
 
   sproc = g_subprocess_newv((const gchar * const *)args->pdata,
@@ -63,21 +75,25 @@ install_system (TIUBundle *bundle, const gchar *device,
 
   if (bundle == NULL)
     {
-      /* XXX error message */
+      g_set_error_literal (error,
+			   T_ARCHIVE_ERROR,
+			   T_ARCHIVE_ERROR_NO_DATA,
+			   "No valid archive available.");
       return FALSE;
     }
 
-  if (!exec_script ("/usr/libexec/tiu/setup-disk", device, &ierror))
+  if (!exec_script ("/usr/libexec/tiu/setup-disk", device, &ierror,
+		    "/var/log/tiu-setup-disk.log"))
     {
       g_propagate_error(error, ierror);
       return FALSE;
     }
-  if (!exec_script ("/usr/libexec/tiu/setup-root", device, &ierror))
+  if (!exec_script ("/usr/libexec/tiu/setup-root", device, &ierror, ""))
     {
       g_propagate_error(error, ierror);
       return FALSE;
     }
-  if (!exec_script ("/usr/libexec/tiu/setup-usr-snapper", device, &ierror))
+  if (!exec_script ("/usr/libexec/tiu/setup-usr-snapper", device, &ierror, ""))
     {
       g_propagate_error(error, ierror);
       return FALSE;
@@ -92,17 +108,17 @@ install_system (TIUBundle *bundle, const gchar *device,
       return FALSE;
     }
 
-  if (!exec_script ("/usr/libexec/tiu/populate-etc", device, &ierror))
+  if (!exec_script ("/usr/libexec/tiu/populate-etc", device, &ierror, ""))
     {
       g_propagate_error(error, ierror);
       return FALSE;
     }
-  if (!exec_script ("/usr/libexec/tiu/setup-bootloader", device, &ierror))
+  if (!exec_script ("/usr/libexec/tiu/setup-bootloader", device, &ierror, ""))
     {
       g_propagate_error(error, ierror);
       return FALSE;
     }
-  if (!exec_script ("/usr/libexec/tiu/finish", device, &ierror))
+  if (!exec_script ("/usr/libexec/tiu/finish", device, &ierror, ""))
     {
       g_propagate_error(error, ierror);
       return FALSE;

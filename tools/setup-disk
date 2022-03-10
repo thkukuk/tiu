@@ -227,9 +227,6 @@ import sys
 import storage
 import yaml
 
-# Write the logs in "/var/log/libstorage.log"
-storage.set_logger(storage.get_logfile_logger())
-
 
 DEFAULT_LAYOUT = """
 ---
@@ -568,12 +565,21 @@ if __name__ == "__main__":
         metavar="DEVICE",
     )
     parser.add_argument(
+        "-o",
+        "--output",
+        default="/var/log/tiu-setup-disk.log",
+        help="name of log file",
+        metavar="FILENAME",
+    )
+    parser.add_argument(
         "-l",
         "--layout",
         help="YAML document with partitioning layout",
         metavar="YAML",
     )
     args = parser.parse_args()
+
+    storage.set_logger(storage.get_logfile_logger(args.output))
 
     if args.layout:
         with open(args.layout, "r") as f:

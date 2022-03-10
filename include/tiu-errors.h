@@ -8,6 +8,7 @@ typedef enum {
   T_ARCHIVE_ERROR_UNSAFE,
   T_ARCHIVE_ERROR_PAYLOAD,
   T_ARCHIVE_ERROR_SIGNATURE,
+  T_ARCHIVE_ERROR_NO_DATA,
 } TArchiveError;
 
 #define T_MANIFEST_ERROR t_manifest_error_quark()
