@@ -10,6 +10,7 @@ LIBTIU_1.0 {
     check_tiu_archive;
     umount_tiu_archive;
     mount_tiu_archive;
+    free_bundle;
   local:
     *;
 };

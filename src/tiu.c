@@ -24,7 +24,6 @@ static GOptionEntry entries_create[] = {
 };
 static GOptionGroup *create_group;
 
-/* XXX should be NULL, read default from a config file */
 static gchar *squashfs_file = NULL;
 static gchar *target_dir = NULL;
 static GOptionEntry entries_extract[] = {
@@ -66,6 +65,55 @@ init_group_options (void)
   update_group = g_option_group_new("update", "Update options:",
 				    "Show help options for update", NULL, NULL);
   g_option_group_add_entries(update_group, entries_update);
+}
+
+static void
+read_config(const gchar *kind, gchar **archive, gchar **md5sum, gchar **disk_layout)
+{
+   econf_file *key_file = NULL;
+   econf_err ecerror;
+   ecerror = econf_readDirs (&key_file,
+			     "/usr/share/tiu",
+			     "/etc",
+			     "tiu",
+			     "conf",
+			     "=", "#");
+   if (ecerror != ECONF_SUCCESS)
+   {
+      g_fprintf (stderr, "ERROR: While reading tiu.conf file: %s\n", econf_errString(ecerror));
+      exit (1);
+   }
+
+   /* Try at first special *kind* group ("update", "install",...), if not set, use "global" */
+   ecerror = econf_getStringValue(key_file, kind, "archive", archive);
+   if (ecerror != ECONF_SUCCESS)
+      ecerror = econf_getStringValue(key_file, "global", "archive", archive);
+
+   if (ecerror != ECONF_SUCCESS || archive == NULL)
+   {
+      fprintf (stderr, "ERROR: Cannot read -archive- entry from tiu.conf: %s\n", econf_errString(ecerror));
+      exit (1);
+   }
+
+   if (strcmp(kind, "install") == 0)
+   {
+      ecerror = econf_getStringValue(key_file, kind, "disk_layout", disk_layout);
+      if (ecerror != ECONF_SUCCESS)
+	 ecerror = econf_getStringValue(key_file, "global", "disk_layout", disk_layout);
+
+      if (ecerror != ECONF_SUCCESS || archive == NULL)
+      {
+         fprintf (stderr, "ERROR: Cannot read -disk_layout- entry from tiu.conf for installation: %s\n",
+		  econf_errString(ecerror));
+	 //         exit (1);
+      }
+   }
+
+   ecerror = econf_getStringValue(key_file, kind, "md5sum", md5sum);
+   if (ecerror != ECONF_SUCCESS)
+      ecerror = econf_getStringValue(key_file, "global", "md5sum", md5sum);
+
+   econf_free (key_file);
 }
 
 static gboolean
@@ -116,6 +164,8 @@ int
 main(int argc, char **argv)
 {
   gboolean help = FALSE, version = FALSE;
+  gchar *md5sum = NULL;
+  gchar *disk_layout = NULL;
   g_autoptr(GOptionContext) context = NULL;
   GError *error = NULL;
   GOptionEntry options[] = {
@@ -197,34 +247,7 @@ main(int argc, char **argv)
     {
       TIUBundle *bundle = NULL;
 
-      if (squashfs_file == NULL)
-	{
-	  econf_file *key_file = NULL;
-	  econf_err ecerror;
-	  ecerror = econf_readDirs (&key_file,
-				    "/usr/share/tiu",
-				    "/etc",
-				    "tiu",
-				    "conf",
-				    "=", "#");
-	  /* XXX error handling */
-
-	  /* Try at first special "extract" group, if not set, use "global" */
-	  ecerror = econf_getStringValue(key_file, "extract",
-					 "archive", &squashfs_file);
-
-	  if (ecerror != ECONF_SUCCESS)
-	    ecerror = econf_getStringValue(key_file, "global",
-					   "archive", &squashfs_file);
-
-	  econf_free (key_file);
-
-	  if (squashfs_file == NULL)
-	    {
-	      fprintf (stderr, "ERROR: no tiu archive as input specified!\n");
-	      exit (1);
-	    }
-	}
+      read_config("extract", &squashfs_file, &md5sum, &disk_layout);
 
       if (target_dir == NULL)
 	{
@@ -252,40 +275,13 @@ main(int argc, char **argv)
 	    g_fprintf (stderr, "ERROR: extracting the archive failed!\n");
 	  exit (1);
 	}
-      /* XXX free bundle */
+      free_bundle(bundle);
     }
   else if (strcmp (argv[1], "install") == 0)
     {
       TIUBundle *bundle = NULL;
 
-      if (squashfs_file == NULL)
-	{
-	  econf_file *key_file = NULL;
-	  econf_err ecerror;
-	  ecerror = econf_readDirs (&key_file,
-				    "/usr/share/tiu",
-				    "/etc",
-				    "tiu",
-				    "conf",
-				    "=", "#");
-	  /* XXX error handling */
-
-	  /* Try at first special "install" group, if not set, use "global" */
-	  ecerror = econf_getStringValue(key_file, "install",
-					 "archive", &squashfs_file);
-
-	  if (ecerror != ECONF_SUCCESS)
-	    ecerror = econf_getStringValue(key_file, "global",
-					   "archive", &squashfs_file);
-
-	  econf_free (key_file);
-
-	  if (squashfs_file == NULL)
-	    {
-	      g_fprintf (stderr, "ERROR: no tiu archive as input specified!\n");
-	      exit (1);
-	    }
-	}
+      read_config("install", &squashfs_file, &md5sum, &disk_layout);
 
       if (device == NULL)
 	{
@@ -296,7 +292,7 @@ main(int argc, char **argv)
       if (!download_check_mount (squashfs_file, &bundle))
 	exit (1);
 
-      /* XXX g_printf("Installing */
+      g_printf("Installing %s\n", squashfs_file);
 
       if (!install_system (bundle, device, &error))
 	{
@@ -309,38 +305,13 @@ main(int argc, char **argv)
 	    g_fprintf (stderr, "ERROR: installation of the archive failed!\n");
 	  exit (1);
 	}
-      /* XXX free bundle */
+      free_bundle(bundle);
     }
   else if (strcmp (argv[1], "update") == 0)
     {
       TIUBundle *bundle = NULL;
 
-      if (squashfs_file == NULL)
-	{
-	  econf_file *key_file = NULL;
-	  econf_err ecerror;
-	  ecerror = econf_readDirs (&key_file,
-				    "/usr/share/tiu",
-				    "/etc",
-				    "tiu",
-				    "conf",
-				    "=", "#");
-	  /* XXX error handling */
-
-	  /* Try at first special "update" group, if not set, use "global" */
-	  ecerror = econf_getStringValue(key_file, "install", "update", &squashfs_file);
-
-	  if (ecerror != ECONF_SUCCESS)
-	    ecerror = econf_getStringValue(key_file, "global", "archive", &squashfs_file);
-
-	  econf_free (key_file);
-
-	  if (squashfs_file == NULL)
-	    {
-	      fprintf (stderr, "ERROR: no tiu archive as input specified!\n");
-	      exit (1);
-	    }
-	}
+      read_config("update", &squashfs_file, &md5sum, &disk_layout);
 
       if (!download_check_mount (squashfs_file, &bundle))
 	exit (1);
@@ -356,7 +327,7 @@ main(int argc, char **argv)
 	    g_fprintf (stderr, "ERROR: system update failed!\n");
 	  exit (1);
 	}
-      /* XXX free bundle */
+      free_bundle(bundle);
     }
   else
     {
