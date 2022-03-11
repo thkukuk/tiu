@@ -24,7 +24,7 @@
 
 static gboolean
 exec_script (const gchar *script, const gchar *device, GError **error,
-	     const gchar *logfile)
+	     const gchar *disk_layout, const gchar *logfile)
 {
   g_autoptr (GSubprocess) sproc = NULL;
   GError *ierror = NULL;
@@ -34,6 +34,9 @@ exec_script (const gchar *script, const gchar *device, GError **error,
     {
       g_printf("Running script '%s' for device '%s'...\n",
 	       script, device);
+      if (strlen(disk_layout) > 0)
+	g_printf("Disk layout stored in: %s\n",
+		 disk_layout);
       if (strlen(logfile) > 0)
 	g_printf("Output will be written to: %s\n",
 		 logfile);
@@ -46,6 +49,11 @@ exec_script (const gchar *script, const gchar *device, GError **error,
     {
        g_ptr_array_add(args, "-o");
        g_ptr_array_add(args, g_strdup(logfile));
+    }
+  if (strlen(disk_layout) > 0)
+    {
+       g_ptr_array_add(args, "-l");
+       g_ptr_array_add(args, g_strdup(disk_layout));
     }
   g_ptr_array_add(args, NULL);
 
@@ -69,7 +77,7 @@ exec_script (const gchar *script, const gchar *device, GError **error,
 
 gboolean
 install_system (TIUBundle *bundle, const gchar *device,
-		GError **error)
+		const gchar *disk_layout, GError **error)
 {
   GError *ierror = NULL;
 
@@ -83,17 +91,17 @@ install_system (TIUBundle *bundle, const gchar *device,
     }
 
   if (!exec_script ("/usr/libexec/tiu/setup-disk", device, &ierror,
-		    "/var/log/tiu-setup-disk.log"))
+		    disk_layout, "/var/log/tiu-setup-disk.log"))
     {
       g_propagate_error(error, ierror);
       return FALSE;
     }
-  if (!exec_script ("/usr/libexec/tiu/setup-root", device, &ierror, ""))
+  if (!exec_script ("/usr/libexec/tiu/setup-root", device, &ierror, "", ""))
     {
       g_propagate_error(error, ierror);
       return FALSE;
     }
-  if (!exec_script ("/usr/libexec/tiu/setup-usr-snapper", device, &ierror, ""))
+  if (!exec_script ("/usr/libexec/tiu/setup-usr-snapper", device, &ierror, "", ""))
     {
       g_propagate_error(error, ierror);
       return FALSE;
@@ -108,17 +116,17 @@ install_system (TIUBundle *bundle, const gchar *device,
       return FALSE;
     }
 
-  if (!exec_script ("/usr/libexec/tiu/populate-etc", device, &ierror, ""))
+  if (!exec_script ("/usr/libexec/tiu/populate-etc", device, &ierror, "", ""))
     {
       g_propagate_error(error, ierror);
       return FALSE;
     }
-  if (!exec_script ("/usr/libexec/tiu/setup-bootloader", device, &ierror, ""))
+  if (!exec_script ("/usr/libexec/tiu/setup-bootloader", device, &ierror, "", ""))
     {
       g_propagate_error(error, ierror);
       return FALSE;
     }
-  if (!exec_script ("/usr/libexec/tiu/finish", device, &ierror, ""))
+  if (!exec_script ("/usr/libexec/tiu/finish", device, &ierror, "", ""))
     {
       g_propagate_error(error, ierror);
       return FALSE;
