@@ -105,7 +105,7 @@ read_config(const gchar *kind, gchar **archive, gchar **md5sum, gchar **disk_lay
       {
          fprintf (stderr, "ERROR: Cannot read -disk_layout- entry from tiu.conf for installation: %s\n",
 		  econf_errString(ecerror));
-	 //         exit (1);
+	          exit (1);
       }
    }
 
@@ -280,6 +280,8 @@ main(int argc, char **argv)
   else if (strcmp (argv[1], "install") == 0)
     {
       TIUBundle *bundle = NULL;
+      char tmp_file[] = {"/tmp/tiu_disk_layout_XXXXXX"};
+      int fd;
 
       read_config("install", &squashfs_file, &md5sum, &disk_layout);
 
@@ -292,9 +294,26 @@ main(int argc, char **argv)
       if (!download_check_mount (squashfs_file, &bundle))
 	exit (1);
 
-      g_printf("Installing %s\n", squashfs_file);
+      g_printf("Installing %s\n", bundle->path);
 
-      if (!install_system (bundle, device, &error))
+      // creating file with disk layout
+      fd = mkstemp(tmp_file);
+      if (fd == -1)
+         {
+            g_fprintf (stderr, "ERROR: Cannot open file %s\n", tmp_file);
+	    exit (1);
+	 }
+
+      if (dprintf(fd, "%s", disk_layout) <=0)
+	 {
+            g_fprintf (stderr, "ERROR: Cannot write file %s\n", tmp_file);
+	    close(fd);
+	    unlink(tmp_file);
+	    exit (1);
+	 }
+      close(fd);
+
+      if (!install_system (bundle, device, tmp_file, &error))
 	{
 	  if (error)
 	    {
@@ -305,6 +324,7 @@ main(int argc, char **argv)
 	    g_fprintf (stderr, "ERROR: installation of the archive failed!\n");
 	  exit (1);
 	}
+      unlink(tmp_file);
       free_bundle(bundle);
     }
   else if (strcmp (argv[1], "update") == 0)

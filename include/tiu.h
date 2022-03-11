@@ -26,7 +26,8 @@ typedef struct TIUBundle TIUBundle;
 
 extern gboolean extract_image(TIUBundle *bundle, const gchar *outputdir, GError **error);
 extern gboolean create_image (const gchar *input, GError **error);
-extern gboolean install_system (TIUBundle *bundle, const gchar *device, GError **error);
+extern gboolean install_system (TIUBundle *bundle, const gchar *device,
+				const gchar *disk_layout, GError **error);
 extern gboolean update_system (TIUBundle *bundle, GError **error);
 extern gboolean download_tiu_archive (const gchar *tiuname, TIUBundle **bundle, GError **error);
 extern gboolean check_tiu_archive(TIUBundle *bundle, GError **error);
