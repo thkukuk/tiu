@@ -127,6 +127,8 @@ install_data(
 
 config = files(
   'conf/tiu.conf',
+  'conf/usr-AB.yaml',
+  'conf/usr-btrfs.yaml',
 )
 
 install_data(

@@ -7,6 +7,7 @@
 #include <glib/gprintf.h>
 #include <glib/gstdio.h>
 #include <gio/gfiledescriptorbased.h>
+#include <openssl/md5.h>
 
 #include "tiu.h"
 #include "tiu-internal.h"
@@ -508,4 +509,36 @@ check_tiu_archive(TIUBundle *bundle, GError **error)
     }
 
   return TRUE;
+}
+
+/*
+  Checking MD5SUM of the archive.
+*/
+gboolean
+check_md5sum(const gchar *filename, const gchar *md5sum)
+{
+  unsigned char c[MD5_DIGEST_LENGTH];
+  int i;
+  MD5_CTX mdContext;
+  int bytes;
+  unsigned char data[1024];
+  char *filemd5 = (char*) malloc(33 *sizeof(char));
+
+  FILE *inFile = fopen (filename, "rb");
+  if (inFile == NULL)
+    return FALSE;
+
+  MD5_Init (&mdContext);
+
+  while ((bytes = fread (data, 1, 1024, inFile)) != 0)
+
+  MD5_Update (&mdContext, data, bytes);
+
+  MD5_Final (c,&mdContext);
+
+  for(i = 0; i < MD5_DIGEST_LENGTH; i++) {
+    sprintf(&filemd5[i*2], "%02x", (unsigned int)c[i]);
+  }
+  fclose (inFile);
+  return (strcmp(filemd5, md5sum) == 0);
 }

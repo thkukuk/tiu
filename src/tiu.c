@@ -26,6 +26,8 @@ static GOptionGroup *create_group;
 
 static gchar *squashfs_file = NULL;
 static gchar *target_dir = NULL;
+static gboolean usr_btrfs_flag = false;
+static gboolean usr_AB_flag = false;
 static GOptionEntry entries_extract[] = {
   {"archive", 'a', 0, G_OPTION_ARG_FILENAME, &squashfs_file, "tiu archive", "FILENAME"},
   {"output", 'o', 0, G_OPTION_ARG_FILENAME, &target_dir, "target directory", "DIRECTORY"},
@@ -37,6 +39,8 @@ static gchar *device = NULL;
 static GOptionEntry entries_install[] = {
   {"archive", 'a', 0, G_OPTION_ARG_FILENAME, &squashfs_file, "tiu archive", "FILENAME"},
   {"device", 'd', 0, G_OPTION_ARG_FILENAME, &device, "installation device", "DEVICE"},
+  {"usr-btrfs", '\0', 0, G_OPTION_ARG_NONE, &usr_btrfs_flag, "using BTRFS disk layout", NULL},
+  {"usr-AB", '\0', 0, G_OPTION_ARG_NONE, &usr_AB_flag, "using AB disk layout", NULL},
   {0}
 };
 static GOptionGroup *install_group;
@@ -68,7 +72,8 @@ init_group_options (void)
 }
 
 static void
-read_config(const gchar *kind, gchar **archive, gchar **md5sum, gchar **disk_layout)
+read_config(const gchar *kind, const gchar *disk_layout_format,
+	    gchar **archive, gchar **archive_md5sum, gchar **disk_layout)
 {
    econf_file *key_file = NULL;
    econf_err ecerror;
@@ -95,33 +100,35 @@ read_config(const gchar *kind, gchar **archive, gchar **md5sum, gchar **disk_lay
       exit (1);
    }
 
-   if (strcmp(kind, "install") == 0)
+   if (strcmp(kind, "install") == 0 && disk_layout_format != NULL)
    {
-      ecerror = econf_getStringValue(key_file, kind, "disk_layout", disk_layout);
+      ecerror = econf_getStringValue(key_file, kind, disk_layout_format, disk_layout);
       if (ecerror != ECONF_SUCCESS)
-	 ecerror = econf_getStringValue(key_file, "global", "disk_layout", disk_layout);
+	 ecerror = econf_getStringValue(key_file, "global", disk_layout_format, disk_layout);
 
       if (ecerror != ECONF_SUCCESS || archive == NULL)
       {
-         fprintf (stderr, "ERROR: Cannot read -disk_layout- entry from tiu.conf for installation: %s\n",
-		  econf_errString(ecerror));
+         fprintf (stderr, "ERROR: Cannot read -%s- entry from tiu.conf for installation: %s\n",
+		  disk_layout_format, econf_errString(ecerror));
 	          exit (1);
       }
+   } else {
+      *disk_layout = NULL;
    }
 
-   ecerror = econf_getStringValue(key_file, kind, "md5sum", md5sum);
+   ecerror = econf_getStringValue(key_file, kind, "archive_md5sum", archive_md5sum);
    if (ecerror != ECONF_SUCCESS)
-      ecerror = econf_getStringValue(key_file, "global", "md5sum", md5sum);
+      econf_getStringValue(key_file, "global", "archive_md5sum", archive_md5sum);
 
    econf_free (key_file);
 }
 
 static gboolean
-download_check_mount(const gchar *tiuname, TIUBundle **bundle)
+download_check_mount(const gchar *tiuname, const gchar *archive_md5sum, TIUBundle **bundle)
 {
   GError *error = NULL;
 
-  if (!download_tiu_archive (tiuname, bundle, &error))
+  if (!download_tiu_archive (tiuname, archive_md5sum, bundle, &error))
     {
       if (error)
 	{
@@ -164,7 +171,7 @@ int
 main(int argc, char **argv)
 {
   gboolean help = FALSE, version = FALSE;
-  gchar *md5sum = NULL;
+  gchar *archive_md5sum = NULL;
   gchar *disk_layout = NULL;
   g_autoptr(GOptionContext) context = NULL;
   GError *error = NULL;
@@ -247,7 +254,7 @@ main(int argc, char **argv)
     {
       TIUBundle *bundle = NULL;
 
-      read_config("extract", &squashfs_file, &md5sum, &disk_layout);
+      read_config("extract", NULL, &squashfs_file, &archive_md5sum, &disk_layout);
 
       if (target_dir == NULL)
 	{
@@ -261,7 +268,7 @@ main(int argc, char **argv)
 	  exit (1);
 	}
 
-      if (!download_check_mount (squashfs_file, &bundle))
+      if (!download_check_mount (squashfs_file, archive_md5sum, &bundle))
       	exit (1);
 
       if (!extract_image(bundle, target_dir, &error))
@@ -280,10 +287,23 @@ main(int argc, char **argv)
   else if (strcmp (argv[1], "install") == 0)
     {
       TIUBundle *bundle = NULL;
-      char tmp_file[] = {"/tmp/tiu_disk_layout_XXXXXX"};
-      int fd;
+      gchar *disk_layout_format = "USR_BTRFS";
 
-      read_config("install", &squashfs_file, &md5sum, &disk_layout);
+      if (!usr_btrfs_flag && !usr_AB_flag)
+	{
+          g_fprintf (stderr, "INFO: Options --usr-btrfs or --usr-AB are not defined. Taking default --usr-btrfs.\n");
+	}
+
+      if (usr_btrfs_flag && usr_AB_flag)
+	{
+          g_fprintf (stderr, "ERROR: Option --usr-btrfs and --usr-AB must not defined at the same time.\n");
+	  exit (1);
+	}
+
+      if (usr_AB_flag)
+        disk_layout_format = "USR_AB";
+
+      read_config("install", disk_layout_format, &squashfs_file, &archive_md5sum, &disk_layout);
 
       if (device == NULL)
 	{
@@ -291,29 +311,13 @@ main(int argc, char **argv)
 	  exit (1);
 	}
 
-      if (!download_check_mount (squashfs_file, &bundle))
+      if (!download_check_mount (squashfs_file, archive_md5sum, &bundle))
 	exit (1);
 
-      g_printf("Installing %s\n", bundle->path);
+      g_printf("Installing %s with disk layout described in %s\n",
+	       bundle->path, disk_layout);
 
-      // creating file with disk layout
-      fd = mkstemp(tmp_file);
-      if (fd == -1)
-         {
-            g_fprintf (stderr, "ERROR: Cannot open file %s\n", tmp_file);
-	    exit (1);
-	 }
-
-      if (dprintf(fd, "%s", disk_layout) <=0)
-	 {
-            g_fprintf (stderr, "ERROR: Cannot write file %s\n", tmp_file);
-	    close(fd);
-	    unlink(tmp_file);
-	    exit (1);
-	 }
-      close(fd);
-
-      if (!install_system (bundle, device, tmp_file, &error))
+      if (!install_system (bundle, device, disk_layout, &error))
 	{
 	  if (error)
 	    {
@@ -324,16 +328,16 @@ main(int argc, char **argv)
 	    g_fprintf (stderr, "ERROR: installation of the archive failed!\n");
 	  exit (1);
 	}
-      unlink(tmp_file);
+
       free_bundle(bundle);
     }
   else if (strcmp (argv[1], "update") == 0)
     {
       TIUBundle *bundle = NULL;
 
-      read_config("update", &squashfs_file, &md5sum, &disk_layout);
+      read_config("update", NULL, &squashfs_file, &archive_md5sum, &disk_layout);
 
-      if (!download_check_mount (squashfs_file, &bundle))
+      if (!download_check_mount (squashfs_file, archive_md5sum, &bundle))
 	exit (1);
 
       if (!update_system (bundle, &error))
