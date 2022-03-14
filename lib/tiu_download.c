@@ -7,7 +7,8 @@
 #include "network.h"
 
 gboolean
-download_tiu_archive (const gchar *tiuname, struct TIUBundle **bundle, GError **error)
+download_tiu_archive (const gchar *tiuname, const gchar *archive_md5sum,
+		      struct TIUBundle **bundle, GError **error)
 {
   const gchar *cachedir = "/var/cache/tiu";
   GError *ierror = NULL;
@@ -47,6 +48,17 @@ download_tiu_archive (const gchar *tiuname, struct TIUBundle **bundle, GError **
       gchar *tiu_basename = g_path_get_basename(tiuname);
       (*bundle)->path = g_build_filename(cachedir, tiu_basename, NULL);
       free (tiu_basename);
+
+      if (archive_md5sum)
+	{
+	  /*Checking if file has already been downloaded */
+	  if (check_md5sum((*bundle)->path, archive_md5sum))
+          {
+            g_printf("Tiu archive '%s' has already been downloaded...\n",
+		     (*bundle)->path);
+	    return TRUE;
+	  }
+	}
 
       if (g_mkdir_with_parents(cachedir, 0700) != 0)
         {
