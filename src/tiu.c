@@ -17,6 +17,13 @@
 #include "tiu.h"
 #include "tiu-internal.h"
 
+#define INSTALL "install"
+#define EXTRACT "extract"
+#define CREATE "create"
+#define UPDATE "update"
+#define USR_BTRFS "USR_BTRFS"
+#define USR_AB "USR_AB"
+
 static gchar *input_tar = NULL;
 static GOptionEntry entries_create[] = {
   {"tar", 't', 0, G_OPTION_ARG_FILENAME, &input_tar, "tar archive", "FILENAME"},
@@ -39,7 +46,7 @@ static gchar *device = NULL;
 static GOptionEntry entries_install[] = {
   {"archive", 'a', 0, G_OPTION_ARG_FILENAME, &squashfs_file, "tiu archive", "FILENAME"},
   {"device", 'd', 0, G_OPTION_ARG_FILENAME, &device, "installation device", "DEVICE"},
-  {"usr-btrfs", '\0', 0, G_OPTION_ARG_NONE, &usr_btrfs_flag, "using BTRFS disk layout", NULL},
+  {"usr-btrfs", '\0', 0, G_OPTION_ARG_NONE, &usr_btrfs_flag, "using BTRFS disk layout (default)", NULL},
   {"usr-AB", '\0', 0, G_OPTION_ARG_NONE, &usr_AB_flag, "using AB disk layout", NULL},
   {0}
 };
@@ -54,19 +61,19 @@ static GOptionGroup *update_group;
 static void
 init_group_options (void)
 {
-  extract_group = g_option_group_new("extract", "Extract options:",
+  extract_group = g_option_group_new(EXTRACT, "Extract options:",
 				    "Show help options for extract", NULL, NULL);
   g_option_group_add_entries(extract_group, entries_extract);
 
-  create_group = g_option_group_new("create", "Create options:",
+  create_group = g_option_group_new(CREATE, "Create options:",
 				    "Show help options for create", NULL, NULL);
   g_option_group_add_entries(create_group, entries_create);
 
-  install_group = g_option_group_new("install", "Installation options:",
+  install_group = g_option_group_new(INSTALL, "Installation options:",
 				    "Show help options for install", NULL, NULL);
   g_option_group_add_entries(install_group, entries_install);
 
-  update_group = g_option_group_new("update", "Update options:",
+  update_group = g_option_group_new(UPDATE, "Update options:",
 				    "Show help options for update", NULL, NULL);
   g_option_group_add_entries(update_group, entries_update);
 }
@@ -100,7 +107,7 @@ read_config(const gchar *kind, const gchar *disk_layout_format,
       exit (1);
    }
 
-   if (strcmp(kind, "install") == 0 && disk_layout_format != NULL)
+   if (strcmp(kind, INSTALL) == 0 && disk_layout_format != NULL)
    {
       ecerror = econf_getStringValue(key_file, kind, disk_layout_format, disk_layout);
       if (ecerror != ECONF_SUCCESS)
@@ -230,7 +237,7 @@ main(int argc, char **argv)
       exit (1);
     }
 
-  if (strcmp (argv[1], "create") == 0)
+  if (strcmp (argv[1], CREATE) == 0)
     {
       if (input_tar == NULL)
 	{
@@ -250,11 +257,11 @@ main(int argc, char **argv)
 	  exit (1);
 	}
     }
-  else if (strcmp (argv[1], "extract") == 0)
+  else if (strcmp (argv[1], EXTRACT) == 0)
     {
       TIUBundle *bundle = NULL;
 
-      read_config("extract", NULL, &squashfs_file, &archive_md5sum, &disk_layout);
+      read_config(EXTRACT, NULL, &squashfs_file, &archive_md5sum, &disk_layout);
 
       if (target_dir == NULL)
 	{
@@ -284,10 +291,10 @@ main(int argc, char **argv)
 	}
       free_bundle(bundle);
     }
-  else if (strcmp (argv[1], "install") == 0)
+  else if (strcmp (argv[1], INSTALL) == 0)
     {
       TIUBundle *bundle = NULL;
-      gchar *disk_layout_format = "USR_BTRFS";
+      gchar *disk_layout_format = USR_BTRFS;
 
       if (!usr_btrfs_flag && !usr_AB_flag)
 	{
@@ -301,9 +308,9 @@ main(int argc, char **argv)
 	}
 
       if (usr_AB_flag)
-        disk_layout_format = "USR_AB";
+        disk_layout_format = USR_AB;
 
-      read_config("install", disk_layout_format, &squashfs_file, &archive_md5sum, &disk_layout);
+      read_config(INSTALL, disk_layout_format, &squashfs_file, &archive_md5sum, &disk_layout);
 
       if (device == NULL)
 	{
@@ -331,11 +338,11 @@ main(int argc, char **argv)
 
       free_bundle(bundle);
     }
-  else if (strcmp (argv[1], "update") == 0)
+  else if (strcmp (argv[1], UPDATE) == 0)
     {
       TIUBundle *bundle = NULL;
 
-      read_config("update", NULL, &squashfs_file, &archive_md5sum, &disk_layout);
+      read_config(UPDATE, NULL, &squashfs_file, &archive_md5sum, &disk_layout);
 
       if (!download_check_mount (squashfs_file, archive_md5sum, &bundle))
 	exit (1);
