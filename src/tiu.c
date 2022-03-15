@@ -47,7 +47,7 @@ static GOptionEntry entries_install[] = {
   {"archive", 'a', 0, G_OPTION_ARG_FILENAME, &squashfs_file, "tiu archive", "FILENAME"},
   {"device", 'd', 0, G_OPTION_ARG_FILENAME, &device, "installation device", "DEVICE"},
   {"usr-btrfs", '\0', 0, G_OPTION_ARG_NONE, &usr_btrfs_flag, "using BTRFS disk layout (default)", NULL},
-  {"usr-AB", '\0', 0, G_OPTION_ARG_NONE, &usr_AB_flag, "using AB disk layout", NULL},
+  {"usr-AB", '\0', 0, G_OPTION_ARG_NONE, &usr_AB_flag, "using disk layout with 2 partitions (A,B)", NULL},
   {0}
 };
 static GOptionGroup *install_group;
