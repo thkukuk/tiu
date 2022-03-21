@@ -13,9 +13,15 @@ partitions:
           size: 1GiB
           type: linux
         - number: 3
-          size: 6GiB
+          size: 2GiB
           type: linux
         - number: 4
+          size: 2GiB
+          type: linux
+        - number: 5
+          size: 2GiB
+          type: linux
+        - number: 6
           size: rest
           type: linux
 filesystems:
@@ -37,10 +43,14 @@ filesystems:
         - path: boot/grub2/x86_64-efi
         - path: usr/local
   ${DEVICE1_P3}:
-    filesystem: btrfs
-    mountpoint: /os
+    filesystem: xfs
+    mountpoint: /usr
     mount_options: ['ro','x-initrd.mount']
   ${DEVICE1_P4}:
+    filesystem: xfs
+  ${DEVICE1_P5}:
+    filesystem: xfs
+  ${DEVICE1_P6}:
     filesystem: btrfs
     mountpoint: /var
     mount_options: ['nodatacow', 'x-initrd.mount']
