@@ -13,3 +13,11 @@
 
 # General:
 * Move more of the script code into the main code
+
+# Research
+## EFI firmware/bootloader:
+* have three partitions, which three entries in EFI firmware, usrA/usrB switch as default entry. All three should have independent boot loaders.
+  * usrA
+  * usrB
+  * Rescue System
+  
