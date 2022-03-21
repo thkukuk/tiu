@@ -321,6 +321,8 @@ main(int argc, char **argv)
       if (!download_check_mount (squashfs_file, archive_md5sum, &bundle))
 	exit (1);
 
+      /* XXX print Name, Version and Architecture of the image we install. Read from manifest. */
+      /* XXX this should be verbose or debug. */
       g_printf("Installing %s with disk layout described in %s\n",
 	       bundle->path, disk_layout);
 
