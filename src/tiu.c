@@ -311,7 +311,7 @@ main(int argc, char **argv)
       if (usr_AB_flag)
 	{
 	  disk_layout_format = USR_AB;
-	  disk_layout_format = TIU_USR_BTRFS;
+	  schema = TIU_USR_AB;
 	}
 
       read_config(INSTALL, disk_layout_format, &squashfs_file, &archive_md5sum, &disk_layout);

@@ -92,17 +92,31 @@ install_system (TIUBundle *bundle, const gchar *device,
       return FALSE;
     }
 
+  if (device == NULL)
+    {
+      /* XXX Error message */
+      return FALSE;
+    }
+
+  if (disk_layout == NULL)
+    {
+      /* XXX Error message */
+      return FALSE;
+    }
+
   if (!exec_script ("/usr/libexec/tiu/setup-disk", device, &ierror,
 		    disk_layout, "/var/log/tiu-setup-disk.log"))
     {
       g_propagate_error(error, ierror);
       return FALSE;
     }
+
   if (!exec_script ("/usr/libexec/tiu/setup-root", device, &ierror, "", ""))
     {
       g_propagate_error(error, ierror);
       return FALSE;
     }
+
   if (schema == TIU_USR_BTRFS)
     {
       /* snapshots for /usr is only required if /usr is btrfs and the only /usr partition */
