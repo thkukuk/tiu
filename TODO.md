@@ -13,6 +13,7 @@
 * Take the build number from the build environment and add it to the manifest
 
 # General:
+* Implement normal (means nearly sileng), verbose and debug mode/flags
 * Move more of the script code into the main code
 
 # Research
