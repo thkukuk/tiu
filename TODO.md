@@ -3,6 +3,7 @@
 * Print full product name, version and architecture for fresh installations. Take data from Manifest.
 * If no "--force" option is given, admin needs to explicit confirm that earsing the disk is ok.
 * SELinux support
+* Cleanup: after installation, remove snapper files in root of inst-sys
 
 # Update:
 * Check that the update images fits to the installed system and is newer
