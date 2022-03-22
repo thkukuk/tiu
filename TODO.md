@@ -4,6 +4,7 @@
 * If no "--force" option is given, admin needs to explicit confirm that earsing the disk is ok.
 * SELinux support
 * Cleanup: after installation, remove snapper files in root of inst-sys
+* setup-disk: returns 0 even if old disklayout cannot be wiped
 
 # Update:
 * Check that the update images fits to the installed system and is newer
