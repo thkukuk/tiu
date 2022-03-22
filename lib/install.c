@@ -17,6 +17,7 @@
 #include <errno.h>
 #include <glib/gprintf.h>
 #include <libeconf.h>
+#include <sys/mount.h>
 
 #include "tiu.h"
 #include "tiu-internal.h"
@@ -77,6 +78,7 @@ exec_script (const gchar *script, const gchar *device, GError **error,
 
 gboolean
 install_system (TIUBundle *bundle, const gchar *device,
+		TIUPartSchema schema,
 		const gchar *disk_layout, GError **error)
 {
   GError *ierror = NULL;
@@ -101,10 +103,26 @@ install_system (TIUBundle *bundle, const gchar *device,
       g_propagate_error(error, ierror);
       return FALSE;
     }
-  if (!exec_script ("/usr/libexec/tiu/setup-usr-snapper", device, &ierror, "", ""))
+  if (schema == TIU_USR_BTRFS)
     {
-      g_propagate_error(error, ierror);
-      return FALSE;
+      /* snapshots for /usr is only required if /usr is btrfs and the only /usr partition */
+      if (!exec_script ("/usr/libexec/tiu/setup-usr-snapper", device, &ierror, "", ""))
+	{
+	  g_propagate_error(error, ierror);
+	  return FALSE;
+	}
+    }
+  else
+    {
+      /* we have at minimum two partitions A/B to switch between. Re-mount /usr read-write */
+      /* XXX replace hard coded device and filesystem values */
+      if (mount("/dev/vda3", "/mnt/usr", "xfs", MS_REMOUNT, NULL))
+	{
+	  int err = errno;
+	  g_set_error(&ierror, G_FILE_ERROR, g_file_error_from_errno(err),
+		      "failed to re-mount /usr read-write: %s", g_strerror(err));
+	  return FALSE;
+	}
     }
 
   if (!extract_image(bundle, "/mnt/usr", &ierror))

@@ -24,9 +24,15 @@ extern "C" {
 
 typedef struct TIUBundle TIUBundle;
 
+typedef enum {
+  TIU_USR_BTRFS,
+  TIU_USR_AB
+} TIUPartSchema;
+
 extern gboolean extract_image(TIUBundle *bundle, const gchar *outputdir, GError **error);
 extern gboolean create_image (const gchar *input, GError **error);
 extern gboolean install_system (TIUBundle *bundle, const gchar *device,
+                                TIUPartSchema schema,
 				const gchar *disk_layout, GError **error);
 extern gboolean update_system (TIUBundle *bundle, GError **error);
 extern gboolean download_tiu_archive (const gchar *tiuname, const gchar *archive_md5sum,

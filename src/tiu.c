@@ -295,10 +295,11 @@ main(int argc, char **argv)
     {
       TIUBundle *bundle = NULL;
       gchar *disk_layout_format = USR_BTRFS;
+      TIUPartSchema schema = TIU_USR_BTRFS;
 
       if (!usr_btrfs_flag && !usr_AB_flag)
 	{
-          g_fprintf (stderr, "INFO: Options --usr-btrfs or --usr-AB are not defined. Taking default --usr-btrfs.\n");
+          g_printf ("INFO: Options --usr-btrfs or --usr-AB are not defined. Taking default --usr-btrfs.\n");
 	}
 
       if (usr_btrfs_flag && usr_AB_flag)
@@ -308,7 +309,10 @@ main(int argc, char **argv)
 	}
 
       if (usr_AB_flag)
-        disk_layout_format = USR_AB;
+	{
+	  disk_layout_format = USR_AB;
+	  disk_layout_format = TIU_USR_BTRFS;
+	}
 
       read_config(INSTALL, disk_layout_format, &squashfs_file, &archive_md5sum, &disk_layout);
 
@@ -321,12 +325,12 @@ main(int argc, char **argv)
       if (!download_check_mount (squashfs_file, archive_md5sum, &bundle))
 	exit (1);
 
-      /* XXX print Name, Version and Architecture of the image we install. Read from manifest. */
+      /* XXX print Name, Version and Architecture of the image we install. Read from tiu image manifest. */
       /* XXX this should be verbose or debug. */
       g_printf("Installing %s with disk layout described in %s\n",
 	       bundle->path, disk_layout);
 
-      if (!install_system (bundle, device, disk_layout, &error))
+      if (!install_system (bundle, device, schema, disk_layout, &error))
 	{
 	  if (error)
 	    {
@@ -339,6 +343,8 @@ main(int argc, char **argv)
 	}
 
       free_bundle(bundle);
+
+      g_printf("System successfully installed...\n");
     }
   else if (strcmp (argv[1], UPDATE) == 0)
     {

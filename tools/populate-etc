@@ -18,8 +18,12 @@ cp -av ${ROOTDIR}/usr/share/factory/etc/snapper ${ROOTDIR}/etc/
 cp -a ${ROOTDIR}/usr/share/fillup-templates/sysconfig.snapper ${ROOTDIR}/etc/sysconfig/snapper
 # Initialize missing snapper stuff
 chroot ${ROOTDIR} /usr/lib/snapper/installation-helper --step 4
-sed -e 's|/mnt/os|/os|g' /etc/snapper/configs/usr > ${ROOTDIR}/etc/snapper/configs/usr
-sed -i -e 's|SNAPPER_CONFIGS=.*|SNAPPER_CONFIGS="root usr"|g' ${ROOTDIR}/etc/sysconfig/snapper
+
+# Adjust snapper "usr" config if it exist.
+if [ -f /etc/snapper/configs/usr ]; then
+  sed -e 's|/mnt/os|/os|g' /etc/snapper/configs/usr > ${ROOTDIR}/etc/snapper/configs/usr
+  sed -i -e 's|SNAPPER_CONFIGS=.*|SNAPPER_CONFIGS="root usr"|g' ${ROOTDIR}/etc/sysconfig/snapper
+fi
 
 # configure locale and timezone
 ln -sf /usr/share/factory/etc/locale.conf ${ROOTDIR}/etc/
