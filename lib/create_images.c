@@ -433,6 +433,7 @@ create_image (const gchar *input, GError **gerror)
       return FALSE;
     }
 
+  /* XXX not for usrAB */
   /* Create required directories */
   gchar *dir = g_strjoin("/", tmpdir, "usr", ".snapshots", NULL);
   if (g_mkdir(dir, 0750) != 0)
