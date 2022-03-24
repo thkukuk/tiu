@@ -1,20 +1,20 @@
 #!/bin/bash
 
-set -e
+source $(dirname $0)/logging
 
 ROOTDIR=/mnt
 
 # Create /var/log/journal...
-mkdir -p ${ROOTDIR}/var/log/journal
-chmod 2755 ${ROOTDIR}/var/log/journal
-chroot ${ROOTDIR} chown root:systemd-journal /var/log/journal
+run "mkdir -p ${ROOTDIR}/var/log/journal"
+run "chmod 2755 ${ROOTDIR}/var/log/journal"
+run "chroot ${ROOTDIR} chown root:systemd-journal /var/log/journal"
 
 if [ -d ${ROOTDIR}/os ]; then
     # Switch subvolume back to read-only
-    btrfs property set ${ROOTDIR}/os/.snapshots/1/snapshot ro true
+    run "btrfs property set ${ROOTDIR}/os/.snapshots/1/snapshot ro true"
 fi
 
-umount -R ${ROOTDIR}/usr
+run "umount -R ${ROOTDIR}/usr"
 
 # Umount everything
-umount -R ${ROOTDIR}
+run "umount -R ${ROOTDIR}"

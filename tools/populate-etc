@@ -1,33 +1,33 @@
 #!/bin/bash
 
-set -e
+source $(dirname $0)/logging
 
 ROOTDIR=/mnt
 
 # We need the root account and systemd users in initramfs
-chroot ${ROOTDIR} systemd-sysusers system-user-root.conf
-chroot ${ROOTDIR} systemd-sysusers system-group-hardware.conf
+run "chroot ${ROOTDIR} systemd-sysusers system-user-root.conf"
+run "chroot ${ROOTDIR} systemd-sysusers system-group-hardware.conf"
 for i in ${ROOTDIR}/usr/lib/sysusers.d/systemd*.conf; do
-    chroot ${ROOTDIR} systemd-sysusers $(basename $i)
+    run "chroot ${ROOTDIR} systemd-sysusers $(basename $i)"
 done
 
-mkdir -p ${ROOTDIR}/etc/sysconfig
+run "mkdir -p ${ROOTDIR}/etc/sysconfig"
 
 # copy snapper configs
-cp -av ${ROOTDIR}/usr/share/factory/etc/snapper ${ROOTDIR}/etc/
-cp -a ${ROOTDIR}/usr/share/fillup-templates/sysconfig.snapper ${ROOTDIR}/etc/sysconfig/snapper
+run "cp -av ${ROOTDIR}/usr/share/factory/etc/snapper ${ROOTDIR}/etc/"
+run "cp -a ${ROOTDIR}/usr/share/fillup-templates/sysconfig.snapper ${ROOTDIR}/etc/sysconfig/snapper"
 # Initialize missing snapper stuff
-chroot ${ROOTDIR} /usr/lib/snapper/installation-helper --step 4
+run "chroot ${ROOTDIR} /usr/lib/snapper/installation-helper --step 4"
 
 # Adjust snapper "usr" config if it exist.
 if [ -f /etc/snapper/configs/usr ]; then
-  sed -e 's|/mnt/os|/os|g' /etc/snapper/configs/usr > ${ROOTDIR}/etc/snapper/configs/usr
-  sed -i -e 's|SNAPPER_CONFIGS=.*|SNAPPER_CONFIGS="root usr"|g' ${ROOTDIR}/etc/sysconfig/snapper
+  run "sed -e 's|/mnt/os|/os|g' /etc/snapper/configs/usr > ${ROOTDIR}/etc/snapper/configs/usr"
+  run "sed -i -e 's|SNAPPER_CONFIGS=.*|SNAPPER_CONFIGS=\"root usr\"|g' ${ROOTDIR}/etc/sysconfig/snapper"
 fi
 
 # configure locale and timezone
-ln -sf /usr/share/factory/etc/locale.conf ${ROOTDIR}/etc/
-ln -sf /usr/share/zoneinfo/UTC ${ROOTDIR}/etc/localtime
+run "ln -sf /usr/share/factory/etc/locale.conf ${ROOTDIR}/etc/"
+run "ln -sf /usr/share/zoneinfo/UTC ${ROOTDIR}/etc/localtime"
 
 # Use networkd
 #mkdir -p ${ROOTDIR}/etc/systemd/network
@@ -41,5 +41,5 @@ ln -sf /usr/share/zoneinfo/UTC ${ROOTDIR}/etc/localtime
 #EOT
 
 # Use NetworkManager
-mkdir -p ${ROOTDIR}/etc/sysconfig/network/
-cp -av /etc/sysconfig/network/ifcfg-* ${ROOTDIR}/etc/sysconfig/network/
+run "mkdir -p ${ROOTDIR}/etc/sysconfig/network/"
+run "cp -av /etc/sysconfig/network/ifcfg-* ${ROOTDIR}/etc/sysconfig/network/"

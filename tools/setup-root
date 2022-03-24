@@ -1,17 +1,17 @@
 #!/bin/bash
 
-set -e
+source $(dirname $0)/logging
 
 ROOTDIR=/mnt
 
 # Create compat symlinks because of usrMove
-ln -sf usr/bin ${ROOTDIR}/bin
-ln -sf usr/sbin ${ROOTDIR}/sbin
-ln -sf usr/lib ${ROOTDIR}/lib
-ln -sf usr/lib64 ${ROOTDIR}/lib64
-mkdir ${ROOTDIR}/dev
-mkdir ${ROOTDIR}/sys
-mkdir ${ROOTDIR}/proc
+run "ln -sf usr/bin ${ROOTDIR}/bin"
+run "ln -sf usr/sbin ${ROOTDIR}/sbin"
+run "ln -sf usr/lib ${ROOTDIR}/lib"
+run "ln -sf usr/lib64 ${ROOTDIR}/lib64"
+run "mkdir ${ROOTDIR}/dev"
+run "mkdir ${ROOTDIR}/sys"
+run "mkdir ${ROOTDIR}/proc"
 # dracut does not work without this directories
-mkdir ${ROOTDIR}/run
-mkdir -p ${ROOTDIR}/var/tmp
+run "mkdir ${ROOTDIR}/run"
+run "mkdir -p ${ROOTDIR}/var/tmp"
