@@ -433,16 +433,6 @@ create_image (const gchar *input, GError **gerror)
       return FALSE;
     }
 
-  /* XXX not for usrAB */
-  /* Create required directories */
-  gchar *dir = g_strjoin("/", tmpdir, "usr", ".snapshots", NULL);
-  if (g_mkdir(dir, 0750) != 0)
-    {
-      g_set_error(gerror, G_FILE_ERROR, G_FILE_ERROR_FAILED,
-                  "Failed creating directory '%s' (%s)", dir, strerror(errno));
-      return FALSE;
-    }
-
   /* Cleanup subvolumes */
   if (debug_flag)
     g_print("Cleanup of subvolumes...\n");
