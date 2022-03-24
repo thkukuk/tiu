@@ -67,8 +67,7 @@ rm_dir_content (const gchar *dir, const gchar *tmpdir, GError **error)
 {
   g_autoptr(GFileEnumerator) enumerator = NULL;
 
-  GFile *file = g_file_new_for_path (g_strjoin("/", tmpdir,
-					       "usr", dir, NULL));
+  GFile *file = g_file_new_for_path (g_strjoin("/", tmpdir, dir, NULL));
   enumerator = g_file_enumerate_children (file,
 					  G_FILE_ATTRIBUTE_STANDARD_NAME,
                                           G_FILE_QUERY_INFO_NOFOLLOW_SYMLINKS,
