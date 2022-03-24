@@ -23,6 +23,9 @@
 #include "tiu-internal.h"
 #include "tiu-errors.h"
 
+#define LIBEXEC_TIU "/usr/libexec/tiu/"
+#define LOG "/var/log/"
+
 static gboolean
 exec_script (const gchar *script, const gchar *device, GError **error,
 	     const gchar *disk_layout, const gchar *logfile)
@@ -102,14 +105,15 @@ install_system (TIUBundle *bundle, const gchar *device,
       return FALSE;
     }
 
-  if (!exec_script ("/usr/libexec/tiu/setup-disk", device, &ierror,
-		    disk_layout, "/var/log/tiu-setup-disk.log"))
+  if (!exec_script (LIBEXEC_TIU"setup-disk", device, &ierror,
+		    disk_layout, LOG"tiu-setup-disk.log"))
     {
       g_propagate_error(error, ierror);
       return FALSE;
     }
 
-  if (!exec_script ("/usr/libexec/tiu/setup-root", device, &ierror, NULL, NULL))
+  if (!exec_script (LIBEXEC_TIU"setup-root", device,
+		    &ierror, NULL, LOG"tiu-setup-root.log"))
     {
       g_propagate_error(error, ierror);
       return FALSE;
@@ -118,7 +122,8 @@ install_system (TIUBundle *bundle, const gchar *device,
   if (schema == TIU_USR_BTRFS)
     {
       /* snapshots for /usr is only required if /usr is btrfs and the only /usr partition */
-      if (!exec_script ("/usr/libexec/tiu/setup-usr-snapper", device, &ierror, NULL, NULL))
+      if (!exec_script (LIBEXEC_TIU"setup-usr-snapper", device,
+			&ierror, NULL, LOG"tiu-setup-usr-snapper.log"))	    
 	{
 	  g_propagate_error(error, ierror);
 	  return FALSE;
@@ -155,17 +160,22 @@ install_system (TIUBundle *bundle, const gchar *device,
       return FALSE;
     }
 
-  if (!exec_script ("/usr/libexec/tiu/populate-etc", device, &ierror, NULL, NULL))
+  if (!exec_script (LIBEXEC_TIU"/populate-etc", device,
+		    &ierror, NULL, LOG"tiu-populate-etc.log"))
     {
       g_propagate_error(error, ierror);
       return FALSE;
     }
-  if (!exec_script ("/usr/libexec/tiu/setup-bootloader", device, &ierror, NULL, NULL))
+
+  if (!exec_script (LIBEXEC_TIU"setup-bootloader", device,
+		    &ierror, NULL, LOG"tiu-setup-bootloader.log"))
     {
       g_propagate_error(error, ierror);
       return FALSE;
     }
-  if (!exec_script ("/usr/libexec/tiu/finish", device, &ierror, NULL, NULL))
+
+  if (!exec_script (LIBEXEC_TIU"finish", device,
+		    &ierror, NULL, LOG"tiu-finish.log"))
     {
       g_propagate_error(error, ierror);
       return FALSE;

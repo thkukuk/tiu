@@ -1,17 +1,18 @@
 #!/bin/bash
 
-set -e
+source $(dirname $0)/logging
 
 ROOTDIR=/mnt
 
 USRDEV=$(awk '!/^#/ && ($2 == "/os") { print $1 }' ${ROOTDIR}/etc/fstab)
-snapper -c usr create-config ${ROOTDIR}/os
-snapper -c usr create
-btrfs property set ${ROOTDIR}/os/.snapshots/1/snapshot ro false
+log_info "USRDEV = $USRDEV"
+run "snapper -c usr create-config ${ROOTDIR}/os"
+run "snapper -c usr create"
+run "btrfs property set ${ROOTDIR}/os/.snapshots/1/snapshot ro false"
 
-echo "${USRDEV}  /os/.snapshots          btrfs  subvol=/.snapshots             0  0" >> ${ROOTDIR}/etc/fstab
+run "echo \"${USRDEV}  /os/.snapshots          btrfs  subvol=/.snapshots             0  0\" >> ${ROOTDIR}/etc/fstab"
 
 # Create usr subdirectory, so that casync can extract archive
-mkdir -p ${ROOTDIR}/os/.snapshots/1/snapshot/usr
-mount -o bind ${ROOTDIR}/os/.snapshots/1/snapshot/usr ${ROOTDIR}/usr
-echo "/sysroot/os/.snapshots/1/snapshot/usr      /usr                    none   bind,ro,x-initrd.mount         0  0" >> ${ROOTDIR}/etc/fstab
+run "mkdir -p ${ROOTDIR}/os/.snapshots/1/snapshot/usr"
+run "mount -o bind ${ROOTDIR}/os/.snapshots/1/snapshot/usr ${ROOTDIR}/usr"
+run "echo \"/sysroot/os/.snapshots/1/snapshot/usr      /usr                    none   bind,ro,x-initrd.mount         0  0\" >> ${ROOTDIR}/etc/fstab"
