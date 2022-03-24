@@ -48,6 +48,7 @@ static GOptionEntry entries_install[] = {
   {"device", 'd', 0, G_OPTION_ARG_FILENAME, &device, "installation device", "DEVICE"},
   {"usr-btrfs", '\0', 0, G_OPTION_ARG_NONE, &usr_btrfs_flag, "using BTRFS disk layout (default)", NULL},
   {"usr-AB", '\0', 0, G_OPTION_ARG_NONE, &usr_AB_flag, "using disk layout with 2 partitions (A,B)", NULL},
+  {"usr-ab", '\0', 0, G_OPTION_ARG_NONE, &usr_AB_flag, "using disk layout with 2 partitions (A,B)", NULL},
   {0}
 };
 static GOptionGroup *install_group;
