@@ -135,6 +135,15 @@ install_system (TIUBundle *bundle, const gchar *device,
 		      "failed to re-mount /usr read-write: %s", g_strerror(err));
 	  return FALSE;
 	}
+
+      /* Make sure usr/local is not mounted, else casync will fail on mount point */
+      if (umount2 ("/mnt/usr/local", UMOUNT_NOFOLLOW))
+	{
+	  int err = errno;
+	  g_set_error(error, G_FILE_ERROR, g_file_error_from_errno(err),
+		      "failed to umount usr/local: %s", g_strerror(err));
+	  return FALSE;
+	}
     }
 
   if (!extract_image(bundle, "/mnt/usr", &ierror))
