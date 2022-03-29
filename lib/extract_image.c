@@ -28,7 +28,7 @@ extract_image(TIUBundle *bundle, const gchar *outputdir,
 
   econf_err ec_err;
   econf_file *tiumf = NULL;
-  gchar *tiumf_name = g_strjoin("/", bundle->mount_point, "manifest.tiu", NULL);
+  gchar *tiumf_name = g_strjoin("/", bundle->mount_point, MANIFEST_TIU, NULL);
 
   if ((ec_err = econf_readFile (&tiumf, tiumf_name, "=", "#")))
     {
