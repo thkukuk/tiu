@@ -26,6 +26,9 @@ extern "C" {
 /* Default maximum downloadable bundle size (800 MiB) */
 #define DEFAULT_MAX_DOWNLOAD_SIZE 800*1024*1024
 
+/* Manifest description file */
+#define MANIFEST_TIU "manifest.tiu"
+
 typedef struct {
   gchar *format;
   gchar *verity_salt;

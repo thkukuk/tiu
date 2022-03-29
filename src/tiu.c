@@ -80,6 +80,59 @@ init_group_options (void)
 }
 
 static void
+log_manifest(const TIUBundle *bundle)
+{
+   if (debug_flag || verbose_flag) {
+      gchar *filename = g_strjoin("/", bundle->mount_point, MANIFEST_TIU, NULL);
+      econf_file *key_file = NULL;
+      econf_err econf_err;
+
+      if ((econf_err = econf_readFile (&key_file, filename, "=", "#"))) {
+	 fprintf (stderr, "ERROR: Cannot read %s: %s\n", filename, econf_errString(econf_err));
+	 return;
+      }
+
+      gchar *value = NULL;
+      g_printf ("Product name: ");
+      if ((econf_err = econf_getStringValue (key_file, "global", "FULL_NAME",
+					     &value))) {
+	 g_printf ("--not defined--");
+      } else {
+         g_printf ("%s", value);
+	 free(value);
+      }
+
+      if ((econf_err = econf_getStringValue (key_file, "global", "NAME",
+					     &value))) {
+	 g_printf (" (--not defined--)");
+      } else {
+         g_printf (" (%s)", value);
+	 free(value);
+      }
+
+      g_printf (", version: ");
+      if ((econf_err = econf_getStringValue (key_file, "global", "VERSION",
+					     &value))) {
+	 g_printf ("--not defined--");
+      } else {
+         g_printf ("%s", value);
+	 free(value);
+      }
+
+      g_printf (", architecture: ");
+      if ((econf_err = econf_getStringValue (key_file, "global", "ARCH",
+					     &value))) {
+	 g_printf ("--not defined--\n");
+      } else {
+         g_printf ("%s\n", value);
+	 free(value);
+      }
+
+      econf_free (key_file);
+   }
+}
+
+static void
 read_config(const gchar *kind, const gchar *disk_layout_format,
 	    gchar **archive, gchar **archive_md5sum, gchar **disk_layout)
 {
@@ -326,10 +379,9 @@ main(int argc, char **argv)
       if (!download_check_mount (squashfs_file, archive_md5sum, &bundle))
 	exit (1);
 
-      /* XXX print Name, Version and Architecture of the image we install. Read from tiu image manifest. */
-      /* XXX this should be verbose or debug. */
       g_printf("Installing %s with disk layout described in %s\n",
 	       bundle->path, disk_layout);
+      log_manifest (bundle);
 
       if (!install_system (bundle, device, schema, disk_layout, &error))
 	{
