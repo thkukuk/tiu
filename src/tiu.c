@@ -35,6 +35,7 @@ static gchar *squashfs_file = NULL;
 static gchar *target_dir = NULL;
 static gboolean usr_btrfs_flag = false;
 static gboolean usr_AB_flag = false;
+static gboolean force_installation = false;
 static GOptionEntry entries_extract[] = {
   {"archive", 'a', 0, G_OPTION_ARG_FILENAME, &squashfs_file, "tiu archive", "FILENAME"},
   {"output", 'o', 0, G_OPTION_ARG_FILENAME, &target_dir, "target directory", "DIRECTORY"},
@@ -49,6 +50,7 @@ static GOptionEntry entries_install[] = {
   {"usr-btrfs", '\0', 0, G_OPTION_ARG_NONE, &usr_btrfs_flag, "using BTRFS disk layout (default)", NULL},
   {"usr-AB", '\0', 0, G_OPTION_ARG_NONE, &usr_AB_flag, "using disk layout with 2 partitions (A,B)", NULL},
   {"usr-ab", '\0', 0, G_OPTION_ARG_NONE, &usr_AB_flag, "using disk layout with 2 partitions (A,B)", NULL},
+  {"force", '\0', 0, G_OPTION_ARG_NONE, &force_installation, "no user confirmation for disk erasing", NULL},
   {0}
 };
 static GOptionGroup *install_group;
@@ -350,6 +352,17 @@ main(int argc, char **argv)
       TIUBundle *bundle = NULL;
       gchar *disk_layout_format = USR_BTRFS;
       TIUPartSchema schema = TIU_USR_BTRFS;
+
+      if (!force_installation) {
+	gchar answer='n';
+	int count=0;
+	do {
+	   g_printf("All data of device %s will be deleted. Continue (y/n)?\n", device);
+	   count = scanf(" %c", &answer);
+	   if (answer == 'n')
+	      exit (0);
+	} while (count!=1 || answer != 'y');
+      }
 
       if (!usr_btrfs_flag && !usr_AB_flag)
 	{
