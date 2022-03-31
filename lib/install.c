@@ -77,6 +77,66 @@ exec_script (const gchar *script, const gchar *device, GError **error,
   return TRUE;
 }
 
+/* This function will be called only if something has gone wrong while  */
+/* the installation. It tries to reset settings in order to ensure that */
+/* the next run of tiu will not fail due corrupted settings.            */
+void cleanup_install (TIUBundle *bundle)
+{
+   g_autoptr (GSubprocess) sproc = NULL;
+   GError *ierror = NULL;
+   GPtrArray *args = g_ptr_array_new_full(5, g_free);
+
+   g_printf("Try to reset system changes which already have been done:\n");
+
+   g_printf("  Delete \"usr\" snapper configuration...\n");
+   g_ptr_array_add(args, "snapper");
+   g_ptr_array_add(args, "-c");
+   g_ptr_array_add(args, "usr");
+   g_ptr_array_add(args, "delete-config");
+   g_ptr_array_add(args, NULL);
+   sproc = g_subprocess_newv((const gchar * const *)args->pdata,
+			     G_SUBPROCESS_FLAGS_STDOUT_SILENCE, &ierror);
+   if (sproc != NULL)
+     {
+	g_subprocess_wait_check(sproc, NULL, &ierror);
+     }
+   g_ptr_array_free(args, FALSE);
+   g_clear_error(&ierror);
+
+   g_printf("  unmount /mnt/usr...\n");
+   args = g_ptr_array_new_full(4, g_free);
+   g_ptr_array_add(args, "umount");
+   g_ptr_array_add(args, "-R");
+   g_ptr_array_add(args, "/mnt/usr");
+   g_ptr_array_add(args, NULL);
+   sproc = g_subprocess_newv((const gchar * const *)args->pdata,
+			     G_SUBPROCESS_FLAGS_STDOUT_SILENCE, &ierror);
+   if (sproc != NULL)
+     {
+	g_subprocess_wait_check(sproc, NULL, &ierror);
+     }
+   g_ptr_array_free(args, FALSE);
+   g_clear_error(&ierror);
+
+   g_printf("  unmount /mnt\n");
+   args = g_ptr_array_new_full(4, g_free);
+   g_ptr_array_add(args, "umount");
+   g_ptr_array_add(args, "-R");
+   g_ptr_array_add(args, "/mnt");
+   g_ptr_array_add(args, NULL);
+   sproc = g_subprocess_newv((const gchar * const *)args->pdata,
+			     G_SUBPROCESS_FLAGS_STDOUT_SILENCE, &ierror);
+   if (sproc != NULL)
+     {
+        g_subprocess_wait_check(sproc, NULL, &ierror);
+     }
+   g_ptr_array_free(args, FALSE);
+   g_clear_error(&ierror);
+
+   g_printf("  unmount /var/lib/tiu/mount\n");
+   if (bundle->path != NULL) umount_tiu_archive (bundle, &ierror);
+}
+
 gboolean
 install_system (TIUBundle *bundle, const gchar *device,
 		TIUPartSchema schema,

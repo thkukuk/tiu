@@ -5,6 +5,7 @@ LIBTIU_1.0 {
     download_tiu_archive;
     extract_image;
     install_system;
+    cleanup_install;
     update_system;
     verbose_flag;
     check_tiu_archive;

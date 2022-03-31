@@ -422,6 +422,8 @@ main(int argc, char **argv)
 	    }
 	  else
 	    g_fprintf (stderr, "ERROR: installation of the archive failed!\n");
+          cleanup_install (bundle);
+	  free_bundle(bundle);
 	  exit (1);
 	}
 

@@ -19,6 +19,9 @@ if [ -d ${ROOTDIR}/os ]; then
     run "btrfs property set ${ROOTDIR}/os/.snapshots/1/snapshot ro true"
 fi
 
+# removing snapper "usr" configuration
+run "snapper -c usr delete-config"
+
 run "umount -R ${ROOTDIR}/usr"
 
 # Umount everything
