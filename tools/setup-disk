@@ -552,6 +552,7 @@ def setup_disks(layout):
         strge.commit(commit_options, my_commit_callbacks)
     except Exception as exception:
         print(exception.what())
+        sys.exit(1)
 
 
 if __name__ == "__main__":
