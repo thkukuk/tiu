@@ -18,15 +18,15 @@ function log_error () { verb_lvl=$err_lvl log "ERROR --- $@" ;}
 function log_crit ()  { verb_lvl=$crt_lvl log "FATAL --- $@" ;}
 function log_dumpvar () { for var in $@ ; do edebug "$var=${!var}" ; done }
 function log() {
-    if [ $log_level -ge $verb_lvl ]; then
-         datestring=`date +"%Y-%m-%d %H:%M:%S"`
-        echo -e "$datestring - $@" >>$logfile
+    if [ "$log_level" -ge "$verb_lvl" ]; then
+         datestring=$(date +"%Y-%m-%d %H:%M:%S")
+        echo -e "$datestring - $@" >> "$logfile"
     fi
 }
 
 function run() {
 	log_info "Calling $@"
-	eval $@ >>$logfile 2>&1
+	eval $@ >> "$logfile" 2>&1
 	ret=$?
         if [[ $ret -eq 0 ]]; then
 		log_ok "returned: " $ret
@@ -38,7 +38,7 @@ function run() {
 
 if [ -z "$log_level" ]; then
    log_level=6
-fi   
+fi
 if [ -z "$logfile" ]; then
    while getopts ":d:o:" arg
    do
@@ -46,7 +46,7 @@ if [ -z "$logfile" ]; then
        	d)
 	    device="$OPTARG"
 	    ;;
-	o)	    
+	o)
 	    logfile="$OPTARG"
 	    ;;
         esac
