@@ -88,7 +88,7 @@ void cleanup_install (TIUBundle *bundle)
 
    g_printf("Try to reset system changes which already have been done:\n");
 
-   g_printf("  Delete \"usr\" snapper configuration...\n");
+   g_printf("  * Delete \"usr\" snapper configuration...\n");
    g_ptr_array_add(args, "snapper");
    g_ptr_array_add(args, "-c");
    g_ptr_array_add(args, "usr");
@@ -103,7 +103,7 @@ void cleanup_install (TIUBundle *bundle)
    g_ptr_array_free(args, FALSE);
    g_clear_error(&ierror);
 
-   g_printf("  unmount /mnt/usr...\n");
+   g_printf("  * unmount /mnt/usr...\n");
    args = g_ptr_array_new_full(4, g_free);
    g_ptr_array_add(args, "umount");
    g_ptr_array_add(args, "-R");
@@ -118,7 +118,7 @@ void cleanup_install (TIUBundle *bundle)
    g_ptr_array_free(args, FALSE);
    g_clear_error(&ierror);
 
-   g_printf("  unmount /mnt\n");
+   g_printf("  * unmount /mnt\n");
    args = g_ptr_array_new_full(4, g_free);
    g_ptr_array_add(args, "umount");
    g_ptr_array_add(args, "-R");
@@ -133,8 +133,8 @@ void cleanup_install (TIUBundle *bundle)
    g_ptr_array_free(args, FALSE);
    g_clear_error(&ierror);
 
-   g_printf("  unmount /var/lib/tiu/mount\n");
-   if (bundle->path != NULL) umount_tiu_archive (bundle, &ierror);
+   g_printf("  * unmount /var/lib/tiu/mount\n");
+   if (bundle->mount_point != NULL) umount_tiu_archive (bundle, &ierror);
 }
 
 gboolean
