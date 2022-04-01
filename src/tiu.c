@@ -163,16 +163,20 @@ read_config(const gchar *kind, const gchar *disk_layout_format,
       exit (1);
    }
 
-   /* Try at first special *kind* group ("update", "install",...), if not set, use "global" */
-   ecerror = econf_getStringValue(key_file, kind, "archive", archive);
-   if (ecerror != ECONF_SUCCESS)
-      ecerror = econf_getStringValue(key_file, "global", "archive", archive);
+   /* only read archive is not specified on commandline */
+   if (*archive == NULL)
+     {
+       /* Try at first special *kind* group ("update", "install",...), if not set, use "global" */
+       ecerror = econf_getStringValue(key_file, kind, "archive", archive);
+       if (ecerror != ECONF_SUCCESS)
+	 ecerror = econf_getStringValue(key_file, "global", "archive", archive);
 
-   if (ecerror != ECONF_SUCCESS || archive == NULL)
-   {
-      fprintf (stderr, "ERROR: Cannot read -archive- entry from tiu.conf: %s\n", econf_errString(ecerror));
-      exit (1);
-   }
+       if (ecerror != ECONF_SUCCESS || archive == NULL)
+	 {
+	   fprintf (stderr, "ERROR: Cannot read -archive- entry from tiu.conf: %s\n", econf_errString(ecerror));
+	   exit (1);
+	 }
+     }
 
    if (strcmp(kind, INSTALL) == 0 && disk_layout_format != NULL)
    {
