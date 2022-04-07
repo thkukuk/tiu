@@ -2,6 +2,7 @@
 
 * SELinux support
 * Support tiuidx archives (requires second url pointing to castr repository)
+* Copy log files from inst-sys to disk
 
 # Update:
 * Check that the update images fits to the installed system and is newer
