@@ -77,64 +77,84 @@ exec_script (const gchar *script, const gchar *device, GError **error,
   return TRUE;
 }
 
-/* This function will be called only if something has gone wrong while  */
-/* the installation. It tries to reset settings in order to ensure that */
-/* the next run of tiu will not fail due corrupted settings.            */
-void cleanup_install (TIUBundle *bundle)
+/* This function is called after installation to cleanup leftovers.
+   Goal should be that you can call the tiu installer as often as you wish. */
+static void
+cleanup_install (TIUBundle *bundle)
 {
    g_autoptr (GSubprocess) sproc = NULL;
    GError *ierror = NULL;
-   GPtrArray *args = g_ptr_array_new_full(5, g_free);
 
-   g_printf("Try to reset system changes which already have been done:\n");
+   if (verbose_flag)
+     g_printf("Try to reset system changes which already have been done:\n");
 
-   g_printf("  * Delete \"usr\" snapper configuration...\n");
-   g_ptr_array_add(args, "snapper");
-   g_ptr_array_add(args, "-c");
-   g_ptr_array_add(args, "usr");
-   g_ptr_array_add(args, "delete-config");
-   g_ptr_array_add(args, NULL);
-   sproc = g_subprocess_newv((const gchar * const *)args->pdata,
-			     G_SUBPROCESS_FLAGS_STDOUT_SILENCE, &ierror);
-   if (sproc != NULL)
+   {
+        GPtrArray *args = g_ptr_array_new_full(4, g_free);
+
+	/* Umount /mnt/usr first, as this could hide /mnt/usr/local */
+	if (verbose_flag)
+	  g_printf("  * unmount /mnt/usr...\n");
+
+	g_ptr_array_add(args, "umount");
+	g_ptr_array_add(args, "-R");
+	g_ptr_array_add(args, "/mnt/usr");
+	g_ptr_array_add(args, NULL);
+	sproc = g_subprocess_newv((const gchar * const *)args->pdata,
+				  G_SUBPROCESS_FLAGS_STDOUT_SILENCE, &ierror);
+	if (sproc != NULL)
+	  {
+	    g_subprocess_wait_check(sproc, NULL, &ierror);
+	  }
+	g_ptr_array_free(args, FALSE);
+	g_clear_error(&ierror);
+
+	if (verbose_flag)
+	  g_printf("  * unmount /mnt\n");
+
+	args = g_ptr_array_new_full(4, g_free);
+	g_ptr_array_add(args, "umount");
+	g_ptr_array_add(args, "-R");
+	g_ptr_array_add(args, "/mnt");
+	g_ptr_array_add(args, NULL);
+	sproc = g_subprocess_newv((const gchar * const *)args->pdata,
+				  G_SUBPROCESS_FLAGS_STDOUT_SILENCE, &ierror);
+	if (sproc != NULL)
+	  {
+	    g_subprocess_wait_check(sproc, NULL, &ierror);
+	  }
+	g_ptr_array_free(args, FALSE);
+	g_clear_error(&ierror);
+   }
+
+   if (access ("/etc/snapper/configs/usr", F_OK) == 0)
      {
-	g_subprocess_wait_check(sproc, NULL, &ierror);
-     }
-   g_ptr_array_free(args, FALSE);
-   g_clear_error(&ierror);
+       GPtrArray *args = g_ptr_array_new_full(5, g_free);
 
-   g_printf("  * unmount /mnt/usr...\n");
-   args = g_ptr_array_new_full(4, g_free);
-   g_ptr_array_add(args, "umount");
-   g_ptr_array_add(args, "-R");
-   g_ptr_array_add(args, "/mnt/usr");
-   g_ptr_array_add(args, NULL);
-   sproc = g_subprocess_newv((const gchar * const *)args->pdata,
-			     G_SUBPROCESS_FLAGS_STDOUT_SILENCE, &ierror);
-   if (sproc != NULL)
+       if (verbose_flag)
+	 g_printf("  * Delete \"usr\" snapper configuration...\n");
+
+       g_ptr_array_add(args, "snapper");
+       g_ptr_array_add(args, "-c");
+       g_ptr_array_add(args, "usr");
+       g_ptr_array_add(args, "delete-config");
+       g_ptr_array_add(args, NULL);
+       sproc = g_subprocess_newv((const gchar * const *)args->pdata,
+				 G_SUBPROCESS_FLAGS_STDOUT_SILENCE, &ierror);
+       if (sproc != NULL)
+	 {
+	   g_subprocess_wait_check(sproc, NULL, &ierror);
+	 }
+       g_ptr_array_free(args, FALSE);
+       g_clear_error(&ierror);
+     }
+
+   if (bundle->mount_point != NULL)
      {
-	g_subprocess_wait_check(sproc, NULL, &ierror);
-     }
-   g_ptr_array_free(args, FALSE);
-   g_clear_error(&ierror);
+       if (verbose_flag)
+	 g_printf("  * unmount /var/lib/tiu/mount\n");
 
-   g_printf("  * unmount /mnt\n");
-   args = g_ptr_array_new_full(4, g_free);
-   g_ptr_array_add(args, "umount");
-   g_ptr_array_add(args, "-R");
-   g_ptr_array_add(args, "/mnt");
-   g_ptr_array_add(args, NULL);
-   sproc = g_subprocess_newv((const gchar * const *)args->pdata,
-			     G_SUBPROCESS_FLAGS_STDOUT_SILENCE, &ierror);
-   if (sproc != NULL)
-     {
-        g_subprocess_wait_check(sproc, NULL, &ierror);
+       umount_tiu_archive (bundle, &ierror);
      }
-   g_ptr_array_free(args, FALSE);
-   g_clear_error(&ierror);
-
-   g_printf("  * unmount /var/lib/tiu/mount\n");
-   if (bundle->mount_point != NULL) umount_tiu_archive (bundle, &ierror);
 }
 
 gboolean
@@ -143,6 +163,7 @@ install_system (TIUBundle *bundle, const gchar *device,
 		const gchar *disk_layout, GError **error)
 {
   GError *ierror = NULL;
+  gboolean retval = FALSE;
 
   if (bundle == NULL)
     {
@@ -169,24 +190,24 @@ install_system (TIUBundle *bundle, const gchar *device,
 		    disk_layout, LOG"tiu-setup-disk.log"))
     {
       g_propagate_error(error, ierror);
-      return FALSE;
+      goto cleanup;
     }
 
   if (!exec_script (LIBEXEC_TIU"setup-root", device,
 		    &ierror, NULL, LOG"tiu-setup-root.log"))
     {
       g_propagate_error(error, ierror);
-      return FALSE;
+      goto cleanup;
     }
 
   if (schema == TIU_USR_BTRFS)
     {
       /* snapshots for /usr is only required if /usr is btrfs and the only /usr partition */
       if (!exec_script (LIBEXEC_TIU"setup-usr-snapper", device,
-			&ierror, NULL, LOG"tiu-setup-usr-snapper.log"))	    
+			&ierror, NULL, LOG"tiu-setup-usr-snapper.log"))
 	{
 	  g_propagate_error(error, ierror);
-	  return FALSE;
+	  goto cleanup;
 	}
     }
   else
@@ -198,7 +219,7 @@ install_system (TIUBundle *bundle, const gchar *device,
 	  int err = errno;
 	  g_set_error(&ierror, G_FILE_ERROR, g_file_error_from_errno(err),
 		      "failed to re-mount /usr read-write: %s", g_strerror(err));
-	  return FALSE;
+	  goto cleanup;
 	}
 
       /* Make sure usr/local is not mounted, else casync will fail on mount point */
@@ -207,7 +228,7 @@ install_system (TIUBundle *bundle, const gchar *device,
 	  int err = errno;
 	  g_set_error(error, G_FILE_ERROR, g_file_error_from_errno(err),
 		      "failed to umount usr/local: %s", g_strerror(err));
-	  return FALSE;
+	  goto cleanup;
 	}
     }
 
@@ -217,29 +238,34 @@ install_system (TIUBundle *bundle, const gchar *device,
 	g_propagate_error(error, ierror);
       else
 	g_fprintf (stderr, "ERROR: installing the archive failed!\n");
-      return FALSE;
+      goto cleanup;
     }
 
   if (!exec_script (LIBEXEC_TIU"/populate-etc", device,
 		    &ierror, NULL, LOG"tiu-populate-etc.log"))
     {
       g_propagate_error(error, ierror);
-      return FALSE;
+      goto cleanup;
     }
 
   if (!exec_script (LIBEXEC_TIU"setup-bootloader", device,
 		    &ierror, NULL, LOG"tiu-setup-bootloader.log"))
     {
       g_propagate_error(error, ierror);
-      return FALSE;
+      goto cleanup;
     }
 
   if (!exec_script (LIBEXEC_TIU"finish", device,
 		    &ierror, NULL, LOG"tiu-finish.log"))
     {
       g_propagate_error(error, ierror);
-      return FALSE;
+      goto cleanup;
     }
 
-  return TRUE;
+  retval = TRUE;
+
+ cleanup:
+  cleanup_install (bundle);
+
+  return retval;
 }
