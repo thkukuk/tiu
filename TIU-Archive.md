@@ -3,8 +3,8 @@
 ## Formats
 
 There are two TIU archive formats:
-* *.tiutar - compressed squashfs image with caidx index
-* *.tiuidx - compressed squashfs image with catar archive
+* .tiutar - compressed squashfs image with caidx index
+* .tiuidx - compressed squashfs image with catar archive
 
 
 ## Design
@@ -35,12 +35,12 @@ installed OS:
 * FULL_NAME - the `PRETTY_NAME` of `/usr/lib/os-release`.
 * PRODUCT_NAME - the `NAME` of `/usr/lib/os-release`, where all spaces are replaced with '-'.
 * VERSION - the `VERSION` from `/usr/lib/os-release`.
+* FORMAT - `caidx` or `catar`.
+* ARCHIVE - Name of the caidx or catar file inside the image.
 
 ### update
 
 This section contains all relevant informations to define, which system can
-how updated.
+be updated.
 
 * MIN_VERSION - the version number of the installed OS, which is at least required.
-* FORMAT - `caidx` or `catar`.
-* ARCHIVE - Name of the caidx or catar file.
