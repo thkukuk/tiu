@@ -372,7 +372,7 @@ main(int argc, char **argv)
 	gchar answer='n';
 	int count=0;
 	do {
-	   g_printf("All data of device %s will be deleted. Continue (y/n)?\n", device);
+	   g_printf("All data of device %s will be deleted. Continue (y/n)? ", device);
 	   count = scanf(" %c", &answer);
 	   if (answer == 'n')
 	      exit (0);
