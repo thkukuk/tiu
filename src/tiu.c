@@ -150,7 +150,7 @@ read_manifest(const TIUBundle *bundle, gchar **format)
     }
 
   g_printf (", format: ");
-  if ((econf_err = econf_getStringValue (key_file, "update", "FORMAT",
+  if ((econf_err = econf_getStringValue (key_file, "global", "FORMAT",
 					 &value)))
     {
       g_printf ("--not defined--\n");
