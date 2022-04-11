@@ -29,6 +29,10 @@ extern "C" {
 /* Manifest description file */
 #define MANIFEST_TIU "manifest.tiu"
 
+#define CATAR "catar"
+#define CAIDX "caidx"
+#define CASTR "castr"
+
 typedef struct {
   gchar *format;
   gchar *verity_salt;

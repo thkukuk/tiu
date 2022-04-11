@@ -80,7 +80,9 @@ exec_script (const gchar *script, const gchar *device, GError **error,
 gboolean
 install_system (TIUBundle *bundle, const gchar *device,
 		TIUPartSchema schema,
-		const gchar *disk_layout, GError **error)
+		const gchar *disk_layout,
+		const gchar *store,
+		GError **error)
 {
   GError *ierror = NULL;
 
@@ -151,7 +153,7 @@ install_system (TIUBundle *bundle, const gchar *device,
 	}
     }
 
-  if (!extract_image(bundle, "/mnt/usr", &ierror))
+  if (!extract_image(bundle, "/mnt/usr", store, &ierror))
     {
       if (ierror)
 	g_propagate_error(error, ierror);

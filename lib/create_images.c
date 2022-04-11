@@ -439,9 +439,9 @@ create_image (const gchar *input, GError **gerror)
   rm_dir_content("usr/local", tmpdir, gerror);
 
   gchar *pvers = g_strjoin("-", product_name, version_id, NULL);
-  gchar *pvers_idx = g_strjoin(".", pvers, "caidx", NULL);
-  gchar *pvers_str = g_strjoin(".", pvers, "castr", NULL);
-  gchar *pvers_tar = g_strjoin(".", pvers, "catar", NULL);
+  gchar *pvers_idx = g_strjoin(".", pvers, CAIDX, NULL);
+  gchar *pvers_str = g_strjoin(".", pvers, CASTR, NULL);
+  gchar *pvers_tar = g_strjoin(".", pvers, CATAR, NULL);
 
   if (!casync_make (tmpdir, pvers_idx, pvers_str, gerror))
     {
@@ -475,7 +475,7 @@ create_image (const gchar *input, GError **gerror)
   econf_setStringValue(manifest, "global", "NAME", product_name);
   econf_setStringValue(manifest, "global", "VERSION", version_id);
   econf_setStringValue(manifest, "update", "MIN_VERSION", "20220101");
-  econf_setStringValue(manifest, "update", "FORMAT", "catar");
+  econf_setStringValue(manifest, "update", "FORMAT", CATAR);
   econf_setStringValue(manifest, "update", "ARCHIVE", pvers_tar);
   econf_writeFile(manifest, tmpdir, "manifest.tiu");
 
@@ -490,7 +490,7 @@ create_image (const gchar *input, GError **gerror)
     }
 
   /* overwrite some values and create a tiuidx file */
-  econf_setStringValue(manifest, "update", "FORMAT", "caidx");
+  econf_setStringValue(manifest, "update", "FORMAT", CAIDX);
   econf_setStringValue(manifest, "update", "ARCHIVE", pvers_idx);
   econf_writeFile(manifest, tmpdir, "manifest.tiu");
 
