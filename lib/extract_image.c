@@ -40,7 +40,7 @@ extract_image(TIUBundle *bundle, const gchar *outputdir, const gchar *store,
     }
 
   gchar *archive_name = NULL;
-  if ((ec_err = econf_getStringValue (tiumf, "update", "ARCHIVE",
+  if ((ec_err = econf_getStringValue (tiumf, "global", "ARCHIVE",
 				     &archive_name)))
     {
       g_set_error(error, G_FILE_ERROR, G_FILE_ERROR_FAILED,

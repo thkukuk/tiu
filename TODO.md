@@ -1,9 +1,8 @@
 # Install:
 
 * SELinux support
-* Cleanup: after installation, remove snapper files in root of inst-sys
-* setup-disk: returns 0 even if old disklayout cannot be wiped
 * Support tiuidx archives (requires second url pointing to castr repository)
+* Copy log files from inst-sys to disk
 
 # Update:
 * Check that the update images fits to the installed system and is newer

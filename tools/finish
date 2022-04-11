@@ -9,12 +9,12 @@ run "mkdir -p ${ROOTDIR}/var/log/journal"
 run "chmod 2755 ${ROOTDIR}/var/log/journal"
 run "chroot ${ROOTDIR} chown root:systemd-journal /var/log/journal"
 
+# XXX create file to run jeos-firstboot.
+# This needs to be solved in a better way...
+run "mkdir -p ${ROOTDIR}/var/lib/YaST2"
+run "touch ${ROOTDIR}/var/lib/YaST2/reconfig_system"
+
 if [ -d ${ROOTDIR}/os ]; then
     # Switch subvolume back to read-only
     run "btrfs property set ${ROOTDIR}/os/.snapshots/1/snapshot ro true"
 fi
-
-run "umount -R ${ROOTDIR}/usr"
-
-# Umount everything
-run "umount -R ${ROOTDIR}"
