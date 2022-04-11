@@ -475,8 +475,8 @@ create_image (const gchar *input, GError **gerror)
   econf_setStringValue(manifest, "global", "NAME", product_name);
   econf_setStringValue(manifest, "global", "VERSION", version_id);
   econf_setStringValue(manifest, "global", "FORMAT", "catar");
+  econf_setStringValue(manifest, "global", "ARCHIVE", pvers_tar);
   econf_setStringValue(manifest, "update", "MIN_VERSION", "20220101");
-  econf_setStringValue(manifest, "update", "ARCHIVE", pvers_tar);
   econf_writeFile(manifest, tmpdir, "manifest.tiu");
 
   gchar *manifest_file = g_strjoin("/", tmpdir, "manifest.tiu", NULL);
@@ -491,7 +491,7 @@ create_image (const gchar *input, GError **gerror)
 
   /* overwrite some values and create a tiuidx file */
   econf_setStringValue(manifest, "global", "FORMAT", "caidx");
-  econf_setStringValue(manifest, "update", "ARCHIVE", pvers_idx);
+  econf_setStringValue(manifest, "global", "ARCHIVE", pvers_idx);
   econf_writeFile(manifest, tmpdir, "manifest.tiu");
 
   if (!mksquashfs (manifest_file, pvers_idx, NULL, output_tiuidx, gerror))
