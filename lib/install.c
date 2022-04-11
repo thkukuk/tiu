@@ -16,6 +16,7 @@
 
 #include <errno.h>
 #include <glib/gprintf.h>
+#include <glib/gstdio.h>
 #include <libeconf.h>
 #include <sys/mount.h>
 
@@ -86,57 +87,21 @@ cleanup_install (TIUBundle *bundle)
    GError *ierror = NULL;
 
    if (verbose_flag)
-     g_printf("Try to reset system changes which already have been done:\n");
+     g_printf("Cleanup system:\n");
 
-   {
-        GPtrArray *args = g_ptr_array_new_full(4, g_free);
-
-	/* Umount /mnt/usr first, as this could hide /mnt/usr/local */
-	if (verbose_flag)
-	  g_printf("  * unmount /mnt/usr...\n");
-
-	g_ptr_array_add(args, "umount");
-	g_ptr_array_add(args, "-R");
-	g_ptr_array_add(args, "/mnt/usr");
-	g_ptr_array_add(args, NULL);
-	sproc = g_subprocess_newv((const gchar * const *)args->pdata,
-				  G_SUBPROCESS_FLAGS_STDOUT_SILENCE, &ierror);
-	if (sproc != NULL)
-	  {
-	    g_subprocess_wait_check(sproc, NULL, &ierror);
-	  }
-	g_ptr_array_free(args, FALSE);
-	g_clear_error(&ierror);
-
-	if (verbose_flag)
-	  g_printf("  * unmount /mnt\n");
-
-	args = g_ptr_array_new_full(4, g_free);
-	g_ptr_array_add(args, "umount");
-	g_ptr_array_add(args, "-R");
-	g_ptr_array_add(args, "/mnt");
-	g_ptr_array_add(args, NULL);
-	sproc = g_subprocess_newv((const gchar * const *)args->pdata,
-				  G_SUBPROCESS_FLAGS_STDOUT_SILENCE, &ierror);
-	if (sproc != NULL)
-	  {
-	    g_subprocess_wait_check(sproc, NULL, &ierror);
-	  }
-	g_ptr_array_free(args, FALSE);
-	g_clear_error(&ierror);
-   }
-
+   /* Remove snapper config for "usr" snapshots */
    if (access ("/etc/snapper/configs/usr", F_OK) == 0)
      {
-       GPtrArray *args = g_ptr_array_new_full(5, g_free);
-
        if (verbose_flag)
 	 g_printf("  * Delete \"usr\" snapper configuration...\n");
 
-       g_ptr_array_add(args, "snapper");
-       g_ptr_array_add(args, "-c");
-       g_ptr_array_add(args, "usr");
-       g_ptr_array_add(args, "delete-config");
+       g_unlink ("/etc/snapper/configs/usr");
+
+       GPtrArray *args = g_ptr_array_new_full(5, g_free);
+       g_ptr_array_add(args, "sed");
+       g_ptr_array_add(args, "-i");
+       g_ptr_array_add(args, "-e");
+       g_ptr_array_add(args, "s|SNAPPER_CONFIGS=.*|SNAPPER_CONFIGS=\"\"|g");
        g_ptr_array_add(args, NULL);
        sproc = g_subprocess_newv((const gchar * const *)args->pdata,
 				 G_SUBPROCESS_FLAGS_STDOUT_SILENCE, &ierror);
@@ -147,6 +112,43 @@ cleanup_install (TIUBundle *bundle)
        g_ptr_array_free(args, FALSE);
        g_clear_error(&ierror);
      }
+
+   { /* XXX 2x same code, move in a function */
+     if (verbose_flag)
+       g_printf("  * unmount /mnt/usr...\n");
+
+     GPtrArray *args = g_ptr_array_new_full(4, g_free);
+     g_ptr_array_add(args, "umount");
+     g_ptr_array_add(args, "-R");
+     g_ptr_array_add(args, "/mnt/usr");
+     g_ptr_array_add(args, NULL);
+     sproc = g_subprocess_newv((const gchar * const *)args->pdata,
+			       G_SUBPROCESS_FLAGS_STDOUT_SILENCE, &ierror);
+     if (sproc != NULL)
+	  {
+	    g_subprocess_wait_check(sproc, NULL, &ierror);
+	  }
+     g_ptr_array_free(args, FALSE);
+     g_clear_error(&ierror);
+   }
+   {
+     if (verbose_flag)
+       g_printf("  * unmount /mnt\n");
+
+     GPtrArray *args = g_ptr_array_new_full(4, g_free);
+     g_ptr_array_add(args, "umount");
+     g_ptr_array_add(args, "-R");
+     g_ptr_array_add(args, "/mnt");
+     g_ptr_array_add(args, NULL);
+     sproc = g_subprocess_newv((const gchar * const *)args->pdata,
+			       G_SUBPROCESS_FLAGS_STDOUT_SILENCE, &ierror);
+     if (sproc != NULL)
+       {
+	 g_subprocess_wait_check(sproc, NULL, &ierror);
+       }
+     g_ptr_array_free(args, FALSE);
+     g_clear_error(&ierror);
+   }
 
    if (bundle->mount_point != NULL)
      {
