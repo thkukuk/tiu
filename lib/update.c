@@ -164,6 +164,7 @@ adjust_etc_fstab_usr_btrfs (const gchar *path, const gchar *snapshot_usr, GError
       g_propagate_prefixed_error(error, ierror,
                                  "Failed to execute sed on /etc/fstab: ");
       retval = FALSE;
+      goto cleanup;
     }
 
  cleanup:
@@ -370,44 +371,17 @@ update_system_usr_btrfs (TIUBundle *bundle, const gchar *store, GError **error)
   gchar *snapshot_root = NULL;
   gchar *snapshot_usr = NULL;
   gchar *subvol_id = NULL;
+  gchar *usr_root_path = NULL;
 
-  if (!snapper_create ("usr", &snapshot_usr, &ierror))
-    {
-      g_propagate_error(error, ierror);
-      return FALSE;
-    }
+  if (verbose_flag)
+    g_printf("Update /usr with btrfs snapshots...\n");
 
+  /* Create at first the root snapshot, so that we can mount /usr
+     later on it to update the kernel */
   if (!snapper_create (NULL, &snapshot_root, &ierror))
     {
       g_propagate_error(error, ierror);
       return FALSE;
-    }
-
-  gchar *snapshot_path = g_strjoin("/", "/os/.snapshots",
-			      snapshot_usr, "snapshot", NULL);
-  if (!btrfs_set_readonly (snapshot_path, false, &ierror))
-    {
-      g_propagate_error(error, ierror);
-      retval = FALSE;
-      goto cleanup;
-    }
-
-  gchar *usr_path = g_strjoin("/", snapshot_path, "usr", NULL);
-  if (!extract_image(bundle, usr_path, store, &ierror))
-    {
-      g_propagate_error(error, ierror);
-      retval = FALSE;
-      goto cleanup;
-    }
-
-  /* touch /usr for systemd */
-  utimensat(AT_FDCWD, usr_path, NULL, 0);
-
-  if (!btrfs_set_readonly (snapshot_path, true, &ierror))
-    {
-      g_propagate_error(error, ierror);
-      retval = FALSE;
-      goto cleanup;
     }
 
   gchar *root_path = g_strjoin("/", "/.snapshots",
@@ -419,9 +393,57 @@ update_system_usr_btrfs (TIUBundle *bundle, const gchar *store, GError **error)
       goto cleanup;
     }
 
+
+  if (!snapper_create ("usr", &snapshot_usr, &ierror))
+    {
+      g_propagate_error(error, ierror);
+      retval = FALSE;
+      goto cleanup;
+    }
+
+  gchar *usr_snapshot_path = g_strjoin("/", "/os/.snapshots",
+				       snapshot_usr, "snapshot", NULL);
+  if (!btrfs_set_readonly (usr_snapshot_path, false, &ierror))
+    {
+      g_propagate_error(error, ierror);
+      retval = FALSE;
+      goto cleanup;
+    }
+
+  gchar *usr_path = g_strjoin("/", usr_snapshot_path, "usr", NULL);
+  if (!extract_image(bundle, usr_path, store, &ierror))
+    {
+      g_propagate_error(error, ierror);
+      retval = FALSE;
+      goto cleanup;
+    }
+
+  /* touch /usr for systemd */
+  utimensat(AT_FDCWD, usr_path, NULL, 0);
+
+  /* make /usr snapshot readonly again */
+  if (!btrfs_set_readonly (usr_snapshot_path, true, &ierror))
+    {
+      g_propagate_error(error, ierror);
+      retval = FALSE;
+      goto cleanup;
+    }
+
   if (!adjust_etc_fstab_usr_btrfs (root_path, snapshot_usr, &ierror))
     {
       g_propagate_error(error, ierror);
+      retval = FALSE;
+      goto cleanup;
+    }
+
+  usr_root_path = g_strjoin("/", "/.snapshots",
+			    snapshot_root, "snapshot/usr", NULL);
+  if (mount(usr_path, usr_root_path, "bind", MS_BIND, NULL) < 0)
+    {
+      int err = errno;
+      g_set_error(error, G_FILE_ERROR, g_file_error_from_errno(err),
+                  "failed to bind mount snapshot %s on %s: %s",
+		  usr_path, usr_root_path, g_strerror(err));
       retval = FALSE;
       goto cleanup;
     }
@@ -444,6 +466,20 @@ update_system_usr_btrfs (TIUBundle *bundle, const gchar *store, GError **error)
   btrfs_set_default (subvol_id, root_path, &ierror);
 
  cleanup:
+  if (usr_root_path != NULL)
+    {
+      if (umount2 (usr_root_path, UMOUNT_NOFOLLOW))
+	/* XXX print error in cleanup really helpful? Will it overwrite original error? */
+#if 0
+	{
+	  int err = errno;
+	  g_set_error(error, G_FILE_ERROR, g_file_error_from_errno(err),
+		      "failed to umount %s: %s", mountpoint, g_strerror(err));
+	}
+#endif
+      free (usr_root_path);
+    }
+
   if (snapshot_usr)
     free (snapshot_usr);
   if (snapshot_root)
@@ -527,6 +563,9 @@ update_system_usr_AB (TIUBundle *bundle __attribute__((unused)),
   gchar *snapshot_root = NULL;
   gchar *subvol_id = NULL;
   gchar *device = NULL;
+
+  if (verbose_flag)
+    g_printf("Update /usr with A/B partitions...\n");
 
   if (!snapper_create (NULL, &snapshot_root, &ierror))
     {

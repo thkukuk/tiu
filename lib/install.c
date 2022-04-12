@@ -63,14 +63,14 @@ exec_script (const gchar *script, const gchar *device, GError **error,
                             G_SUBPROCESS_FLAGS_STDOUT_SILENCE, &ierror);
   if (sproc == NULL)
     {
-      g_propagate_prefixed_error(error, ierror, "Failed to start sub-process: ");
+      g_propagate_prefixed_error(error, ierror, "Failed to start sub-process (%s): ", script);
       return FALSE;
     }
 
   if (!g_subprocess_wait_check(sproc, NULL, &ierror))
     {
       g_propagate_prefixed_error(error, ierror,
-                                 "Failed to execute sub-process: ");
+                                 "Failed to execute sub-process (%s): ", script);
       return FALSE;
     }
 
@@ -96,11 +96,12 @@ cleanup_install (TIUBundle *bundle)
 
        g_unlink ("/etc/snapper/configs/usr");
 
-       GPtrArray *args = g_ptr_array_new_full(5, g_free);
+       GPtrArray *args = g_ptr_array_new_full(6, g_free);
        g_ptr_array_add(args, "sed");
        g_ptr_array_add(args, "-i");
        g_ptr_array_add(args, "-e");
        g_ptr_array_add(args, "s|SNAPPER_CONFIGS=.*|SNAPPER_CONFIGS=\"\"|g");
+       g_ptr_array_add(args, "/etc/sysconfig/snapper");
        g_ptr_array_add(args, NULL);
        sproc = g_subprocess_newv((const gchar * const *)args->pdata,
 				 G_SUBPROCESS_FLAGS_STDOUT_SILENCE, &ierror);
