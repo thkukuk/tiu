@@ -48,7 +48,7 @@ casync_extract(const gchar *input, const gchar *dest, const gchar *store,
      launcher = g_subprocess_launcher_new(G_SUBPROCESS_FLAGS_STDERR_MERGE);
      g_subprocess_launcher_set_stdout_file_path(launcher,
 		  LOG"tiu-cascyn-extract.log");
-     g_printf("Output will be written to %s\n", LOG"tui-cascyn-extract.log");
+     g_printf("Output will be written to %s\n", LOG"tiu-cascyn-extract.log");
      sproc = g_subprocess_launcher_spawnv(launcher,
 		  (const gchar * const *)args->pdata,
 		  &ierror);
