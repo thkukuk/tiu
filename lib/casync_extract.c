@@ -18,15 +18,25 @@ casync_extract(const gchar *input, const gchar *dest, const gchar *store,
 
   g_ptr_array_add(args, g_strdup("casync"));
   g_ptr_array_add(args, g_strdup("extract"));
+
+  if (debug_flag)
+     g_ptr_array_add(args, g_strdup("--verbose"));
+
   if (seed)
     {
       g_ptr_array_add(args, g_strdup("--seed"));
       g_ptr_array_add(args, g_strdup(seed));
+      if (debug_flag) {
+         g_printf("  --seed: %s\n", seed);
+	 g_printf("  --seed-output=no");
+      }
     }
   if (store)
     {
       g_ptr_array_add(args, g_strdup("--store"));
       g_ptr_array_add(args, g_strdup(store));
+      if (debug_flag)
+         g_printf("  --store: %s\n", store);
     }
   /* XXX https://github.com/systemd/casync/issues/240 */
   g_ptr_array_add(args, g_strdup("--seed-output=no"));
@@ -34,18 +44,19 @@ casync_extract(const gchar *input, const gchar *dest, const gchar *store,
   g_ptr_array_add(args, g_strdup(dest));
   g_ptr_array_add(args, NULL);
 
-#if 0 /* XXX */
-  launcher = g_subprocess_launcher_new(G_SUBPROCESS_FLAGS_NONE);
-  if (tmpdir)
-    g_subprocess_launcher_setenv(launcher, "TMPDIR", tmpdir, TRUE);
+  if (debug_flag) {
+     launcher = g_subprocess_launcher_new(G_SUBPROCESS_FLAGS_STDERR_MERGE);
+     g_subprocess_launcher_set_stdout_file_path(launcher,
+		  LOG"tiu-cascyn-extract.log");
+     g_printf("Output will be written to %s\n", LOG"tui-cascyn-extract.log");
+     sproc = g_subprocess_launcher_spawnv(launcher,
+		  (const gchar * const *)args->pdata,
+		  &ierror);
+  } else {
+     sproc = g_subprocess_newv((const gchar * const *)args->pdata,
+		  G_SUBPROCESS_FLAGS_STDOUT_SILENCE, &ierror);
+  }
 
-  sproc = g_subprocess_launcher_spawnv(launcher,
-				       (const gchar * const *)args->pdata,
-				       &ierror);
-#else
-  sproc = g_subprocess_newv((const gchar * const *)args->pdata,
-			    G_SUBPROCESS_FLAGS_STDOUT_SILENCE, &ierror);
-#endif
   if (sproc == NULL)
     {
       g_propagate_prefixed_error(error, ierror,

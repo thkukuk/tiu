@@ -25,7 +25,6 @@
 #include "tiu-errors.h"
 
 #define LIBEXEC_TIU "/usr/libexec/tiu/"
-#define LOG "/var/log/"
 
 static gboolean
 exec_script (const gchar *script, const gchar *device, GError **error,

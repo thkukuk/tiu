@@ -23,6 +23,8 @@
 extern "C" {
 #endif
 
+#define LOG "/var/log/tiu/"
+
 /* Default maximum downloadable bundle size (800 MiB) */
 #define DEFAULT_MAX_DOWNLOAD_SIZE 800*1024*1024
 

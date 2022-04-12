@@ -333,6 +333,13 @@ main(int argc, char **argv)
   if (debug_flag)
     verbose_flag = 1;
 
+  /* Generate log directory */
+  if (g_mkdir_with_parents(LOG, 0700) != 0)
+    {
+       g_fprintf (stderr, "ERROR: Cannot create %s!\n", LOG);
+       exit (1);
+    }
+
   if (version)
     {
       g_print("TIU - Transactional Image Update Version %s\n", "0.1");
