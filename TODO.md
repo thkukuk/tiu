@@ -11,6 +11,7 @@
   * Don't download full images for a few needed blocks
   * Add support for second URL pointing to castr repository
 * Cleanup
+* Make new /usr snapshot default, even if not needed, to avoid people are able to delete the used /usr snapshot
 
 # Building image:
 * Take the build number from the build environment and add it to the manifest
