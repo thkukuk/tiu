@@ -149,15 +149,17 @@ read_manifest(const TIUBundle *bundle, gchar **format)
       free(value);
     }
 
-  g_printf (", format: ");
   if ((econf_err = econf_getStringValue (key_file, "global", "FORMAT",
 					 &value)))
     {
-      g_printf ("--not defined--\n");
+      g_fprintf (stderr,
+		 "ERROR: Cannot read archive format: %s\n",
+		 econf_errString(econf_err));
+      exit (1);
     }
   else
     {
-      g_printf ("%s\n", value);
+      g_printf (", format: %s\n", value);
       *format = value;
     }
 
