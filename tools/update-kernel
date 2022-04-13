@@ -1,6 +1,6 @@
-#!/bin/bash
+#!/bin/sh
 
-source $(dirname $0)/logging
+. $(dirname $0)/logging
 
 FILES=".vmlinuz.hmac System.map sysctl.conf vmlinuz"
 
@@ -16,5 +16,5 @@ for i in /usr/lib/modules/* ; do
     done
     log_info "- - - dracut for $KVER - - -"
     run "dracut --kver \"$KVER\""
-    log_info "- - - end dracut - - -"     
+    log_info "- - - end dracut - - -"
 done

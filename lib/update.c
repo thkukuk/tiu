@@ -26,6 +26,9 @@
 #include "tiu.h"
 #include "tiu-internal.h"
 
+#define TIU_ROOT_DIR "/var/lib/tiu/root"
+static char *devices[] = {"/dev", "/proc", "/sys"};
+
 static gboolean
 snapper_create (const gchar *config, gchar **output, GError **error)
 {
@@ -289,7 +292,161 @@ btrfs_set_default (const gchar *btrfs_id, const gchar *path, GError **error)
 }
 
 static gboolean
-update_kernel (GError **error)
+mount_boot_efi (gchar *target, GError **error)
+{
+  g_autoptr (GSubprocess) sproc = NULL;
+  GError *ierror = NULL;
+  GPtrArray *args = g_ptr_array_new_full(8, NULL);
+
+  if (debug_flag)
+    g_printf("Mount /boot/efi on %s/boot/efi...\n", target);
+
+  g_ptr_array_add(args, "chroot");
+  g_ptr_array_add(args, target);
+  g_ptr_array_add(args, "mount");
+  g_ptr_array_add(args, "/boot/efi");
+  g_ptr_array_add(args, NULL);
+
+  sproc = g_subprocess_newv((const gchar * const *)args->pdata,
+                            G_SUBPROCESS_FLAGS_STDOUT_PIPE, &ierror);
+  if (sproc == NULL)
+    {
+      g_propagate_prefixed_error(error, ierror, "Failed to run mount /boot/efi: ");
+      return FALSE;
+    }
+
+  if (!g_subprocess_wait_check(sproc, NULL, &ierror))
+    {
+      g_propagate_prefixed_error(error, ierror,
+                                 "Failed to execute mount /boot/efi: ");
+      return FALSE;
+    }
+
+  return TRUE;
+}
+
+
+static gboolean
+bind_mount (const gchar *source, const gchar *target, const gchar *dir, GError **error)
+{
+  gboolean retval = TRUE;
+  gchar *target_path = NULL;
+
+  if (dir != NULL)
+    target_path = g_strjoin("/", target, dir, NULL);
+  else
+    target_path = g_strjoin("", target, source, NULL);
+
+  if (mount(source, target_path, "bind", MS_BIND|MS_REC, NULL) < 0)
+    {
+      int err = errno;
+      g_set_error(error, G_FILE_ERROR, g_file_error_from_errno(err),
+                  "failed to bind mount %s on %s: %s",
+		  source, target_path, g_strerror(err));
+      retval = FALSE;
+    }
+  else if (mount(source, target_path, "bind", MS_REC|MS_SLAVE, NULL) < 0)
+    {
+      int err = errno;
+      g_set_error(error, G_FILE_ERROR, g_file_error_from_errno(err),
+                  "failed to make mount %s a slave: %s",
+		  target_path, g_strerror(err));
+      retval = FALSE;
+    }
+
+  free (target_path);
+
+  return retval;
+}
+
+static gboolean
+umount_chroot (const gchar *target, gboolean force, GError **error)
+{
+  g_autoptr (GSubprocess) sproc = NULL;
+  GError *ierror = NULL;
+  gboolean retval = TRUE;
+
+  if (debug_flag)
+    printf ("Umount %s...\n", target);
+
+  GPtrArray *args = g_ptr_array_new_full(4, NULL);
+  g_ptr_array_add(args, "umount");
+  g_ptr_array_add(args, "-R");
+  g_ptr_array_add(args, strdup(target));
+  g_ptr_array_add(args, NULL);
+  sproc = g_subprocess_newv((const gchar * const *)args->pdata,
+			    G_SUBPROCESS_FLAGS_STDOUT_SILENCE, &ierror);
+  if (sproc == NULL)
+    {
+      if (!force)
+	{
+	  g_propagate_prefixed_error(error, ierror,
+				     "Failed to umount chroot environment: ");
+	  retval = FALSE;
+	}
+      goto cleanup;
+    }
+  else if (!g_subprocess_wait_check(sproc, NULL, &ierror))
+    {
+      if (!force)
+	{
+	  g_propagate_prefixed_error(error, ierror,
+				     "Failed to umount chroot environment: ");
+	  retval = FALSE;
+	}
+      goto cleanup;
+    }
+
+ cleanup:
+  g_ptr_array_free(args, TRUE);
+  return retval;
+}
+
+static gboolean
+setup_chroot (const gchar *target, GError **error)
+{
+  GError *ierror = NULL;
+
+  for (size_t i = 0; i < sizeof(devices) / sizeof(devices[0]); i++)
+    {
+      if (debug_flag)
+	printf ("Mount %s into %s...\n", devices[i], target);
+
+      if (!bind_mount(devices[i], target, NULL, &ierror))
+	{
+	  g_propagate_error(error, ierror);
+	  umount_chroot (target, TRUE, &ierror);
+	  return FALSE;
+	}
+    }
+
+  /* bind mount the whole stuff below /var/lib/tiu to make
+     grub2-mkconfig working */
+  if (!g_file_test(TIU_ROOT_DIR, G_FILE_TEST_IS_DIR))
+    {
+      gint ret;
+      ret = g_mkdir_with_parents(TIU_ROOT_DIR, 0700);
+
+      if (ret != 0)
+        {
+          g_set_error(error, G_FILE_ERROR, G_FILE_ERROR_FAILED,
+                      "Failed creating mount path '%s'", TIU_ROOT_DIR);
+          return FALSE;
+        }
+    }
+
+  if (!bind_mount(target, TIU_ROOT_DIR, "", &ierror))
+    {
+      g_propagate_error(error, ierror);
+      umount_chroot (target, TRUE, &ierror);
+      return FALSE;
+    }
+
+  return TRUE;
+}
+
+static gboolean
+update_kernel (gchar *chroot, GError **error)
 {
   g_autoptr (GSubprocess) sproc = NULL;
   GError *ierror = NULL;
@@ -297,8 +454,14 @@ update_kernel (GError **error)
   gboolean retval = TRUE;
 
   if (debug_flag)
-    g_printf("Updating kernel in /boot...\n");
+    g_printf("Updating kernel in %s/boot...\n", chroot?chroot:"");
 
+
+  if (chroot)
+    {
+      g_ptr_array_add(args, "chroot");
+      g_ptr_array_add(args, chroot);
+    }
   g_ptr_array_add(args, "/usr/libexec/tiu/update-kernel");
   g_ptr_array_add(args, NULL);
 
@@ -326,7 +489,7 @@ update_kernel (GError **error)
 }
 
 static gboolean
-update_bootloader (GError **error)
+update_bootloader (gchar *chroot, GError **error)
 {
   g_autoptr (GSubprocess) sproc = NULL;
   GError *ierror = NULL;
@@ -334,8 +497,13 @@ update_bootloader (GError **error)
   gboolean retval = TRUE;
 
   if (debug_flag)
-    g_printf("Updating bootloader...\n");
+    g_printf("Updating bootloader in %s...\n", chroot?chroot:"");
 
+  if (chroot)
+    {
+      g_ptr_array_add(args, "chroot");
+      g_ptr_array_add(args, chroot);
+    }
   g_ptr_array_add(args, "/usr/sbin/update-bootloader");
   g_ptr_array_add(args, "--reinit");
   g_ptr_array_add(args, NULL);
@@ -371,7 +539,6 @@ update_system_usr_btrfs (TIUBundle *bundle, const gchar *store, GError **error)
   gchar *snapshot_root = NULL;
   gchar *snapshot_usr = NULL;
   gchar *subvol_id = NULL;
-  gchar *usr_root_path = NULL;
 
   if (verbose_flag)
     g_printf("Update /usr with btrfs snapshots...\n");
@@ -436,26 +603,44 @@ update_system_usr_btrfs (TIUBundle *bundle, const gchar *store, GError **error)
       goto cleanup;
     }
 
-  usr_root_path = g_strjoin("/", "/.snapshots",
-			    snapshot_root, "snapshot/usr", NULL);
-  if (mount(usr_path, usr_root_path, "bind", MS_BIND, NULL) < 0)
-    {
-      int err = errno;
-      g_set_error(error, G_FILE_ERROR, g_file_error_from_errno(err),
-                  "failed to bind mount snapshot %s on %s: %s",
-		  usr_path, usr_root_path, g_strerror(err));
-      retval = FALSE;
-      goto cleanup;
-    }
-
-  if (!update_kernel (&ierror))
+  if (!setup_chroot (root_path, &ierror))
     {
       g_propagate_error(error, ierror);
       retval = FALSE;
       goto cleanup;
     }
 
-  if (!update_bootloader (&ierror))
+  if (!bind_mount(usr_path, TIU_ROOT_DIR, "usr", &ierror))
+    {
+      g_propagate_error(error, ierror);
+      retval = FALSE;
+      goto cleanup;
+    }
+
+  if (!mount_boot_efi (TIU_ROOT_DIR, &ierror))
+    {
+      g_propagate_error(error, ierror);
+      retval = FALSE;
+      goto cleanup;
+    }
+
+  /* XXX Mount /var inside snapshot, so that we can write the log files.
+     Needs a better way to handle the log files */
+  if (!bind_mount ("/var", TIU_ROOT_DIR, NULL, &ierror))
+    {
+      g_propagate_error(error, ierror);
+      retval = FALSE;
+      goto cleanup;
+    }
+
+  if (!update_kernel (TIU_ROOT_DIR, &ierror))
+    {
+      g_propagate_error(error, ierror);
+      retval = FALSE;
+      goto cleanup;
+    }
+
+  if (!update_bootloader (TIU_ROOT_DIR, &ierror))
     {
       g_propagate_error(error, ierror);
       retval = FALSE;
@@ -466,19 +651,10 @@ update_system_usr_btrfs (TIUBundle *bundle, const gchar *store, GError **error)
   btrfs_set_default (subvol_id, root_path, &ierror);
 
  cleanup:
-  if (usr_root_path != NULL)
-    {
-      if (umount2 (usr_root_path, UMOUNT_NOFOLLOW))
-	/* XXX print error in cleanup really helpful? Will it overwrite original error? */
-#if 0
-	{
-	  int err = errno;
-	  g_set_error(error, G_FILE_ERROR, g_file_error_from_errno(err),
-		      "failed to umount %s: %s", mountpoint, g_strerror(err));
-	}
-#endif
-      free (usr_root_path);
-    }
+  if (ierror != NULL)
+    umount_chroot(TIU_ROOT_DIR, TRUE, NULL);
+  else
+    umount_chroot(TIU_ROOT_DIR, FALSE, &ierror);
 
   if (snapshot_usr)
     free (snapshot_usr);
@@ -639,14 +815,14 @@ update_system_usr_AB (TIUBundle *bundle __attribute__((unused)),
     }
 #endif
 
-  if (!update_kernel (&ierror))
+  if (!update_kernel (NULL, &ierror))
     {
       g_propagate_error(error, ierror);
       retval = FALSE;
       goto cleanup;
     }
 
-  if (!update_bootloader (&ierror))
+  if (!update_bootloader (NULL, &ierror))
     {
       g_propagate_error(error, ierror);
       retval = FALSE;
