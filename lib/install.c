@@ -276,6 +276,8 @@ install_system (TIUBundle *bundle, const gchar *device,
   retval = TRUE;
 
  cleanup:
+  /* Umount /mnt/usr first, since it could hide /mnt/usr/local */
+  umount2 ("/mnt/usr", UMOUNT_NOFOLLOW);
   umount_chroot(TIU_ROOT_DIR, TRUE, NULL);
   cleanup_install (bundle);
 
