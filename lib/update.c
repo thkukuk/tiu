@@ -364,7 +364,7 @@ update_bootloader (GError **error)
 }
 
 static gboolean
-update_system_usr_btrfs (TIUBundle *bundle, GError **error)
+update_system_usr_btrfs (TIUBundle *bundle, const gchar *store, GError **error)
 {
   gboolean retval = TRUE;
   GError *ierror = NULL;
@@ -411,7 +411,7 @@ update_system_usr_btrfs (TIUBundle *bundle, GError **error)
     }
 
   gchar *usr_path = g_strjoin("/", usr_snapshot_path, "usr", NULL);
-  if (!extract_image(bundle, usr_path, &ierror))
+  if (!extract_image(bundle, usr_path, store, &ierror))
     {
       g_propagate_error(error, ierror);
       retval = FALSE;
@@ -555,7 +555,8 @@ get_next_partition (GError **error)
 }
 
 static gboolean
-update_system_usr_AB (TIUBundle *bundle __attribute__((unused)), GError **error)
+update_system_usr_AB (TIUBundle *bundle __attribute__((unused)),
+		      const gchar *store, GError **error)
 {
   gboolean retval = TRUE;
   GError *ierror = NULL;
@@ -608,7 +609,7 @@ update_system_usr_AB (TIUBundle *bundle __attribute__((unused)), GError **error)
       goto cleanup;
     }
 
-  if (!extract_image(bundle, mountpoint, &ierror))
+  if (!extract_image(bundle, mountpoint, store, &ierror))
     {
       g_propagate_error(error, ierror);
       retval = FALSE;
@@ -678,10 +679,10 @@ update_system_usr_AB (TIUBundle *bundle __attribute__((unused)), GError **error)
 }
 
 gboolean
-update_system (TIUBundle *bundle, GError **error)
+update_system (TIUBundle *bundle, const gchar *store, GError **error)
 {
   if (access ("/os", F_OK) == 0)
-    return update_system_usr_btrfs (bundle, error);
+    return update_system_usr_btrfs (bundle, store, error);
   else
-    return update_system_usr_AB (bundle, error);
+    return update_system_usr_AB (bundle, store, error);
 }

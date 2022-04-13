@@ -32,12 +32,15 @@ static GOptionEntry entries_create[] = {
 static GOptionGroup *create_group;
 
 static gchar *squashfs_file = NULL;
+static gchar *chunk_store = NULL;
 static gchar *target_dir = NULL;
 static gboolean usr_btrfs_flag = false;
 static gboolean usr_AB_flag = false;
 static gboolean force_installation = false;
 static GOptionEntry entries_extract[] = {
   {"archive", 'a', 0, G_OPTION_ARG_FILENAME, &squashfs_file, "tiu archive", "FILENAME"},
+  {"store", 's', 0, G_OPTION_ARG_FILENAME, &chunk_store,
+   "URL pointing to castr repository (used for tiuidx archives).", "DIRECTORY"},
   {"output", 'o', 0, G_OPTION_ARG_FILENAME, &target_dir, "target directory", "DIRECTORY"},
   {0}
 };
@@ -46,6 +49,8 @@ static GOptionGroup *extract_group;
 static gchar *device = NULL;
 static GOptionEntry entries_install[] = {
   {"archive", 'a', 0, G_OPTION_ARG_FILENAME, &squashfs_file, "tiu archive", "FILENAME"},
+  {"store", 's', 0, G_OPTION_ARG_FILENAME, &chunk_store,
+   "URL pointing to castr repository (used for tiuidx archives).", "DIRECTORY"},
   {"device", 'd', 0, G_OPTION_ARG_FILENAME, &device, "installation device", "DEVICE"},
   {"usr-btrfs", '\0', 0, G_OPTION_ARG_NONE, &usr_btrfs_flag, "using BTRFS disk layout (default)", NULL},
   {"usr-AB", '\0', 0, G_OPTION_ARG_NONE, &usr_AB_flag, "using disk layout with 2 partitions (A,B)", NULL},
@@ -57,6 +62,8 @@ static GOptionGroup *install_group;
 
 static GOptionEntry entries_update[] = {
   {"archive", 'a', 0, G_OPTION_ARG_FILENAME, &squashfs_file, "tiu archive", "FILENAME"},
+  {"store", 's', 0, G_OPTION_ARG_FILENAME, &chunk_store,
+   "URL pointing to castr repository (used for tiuidx archives).", "DIRECTORY"},
   {0}
 };
 static GOptionGroup *update_group;
@@ -82,7 +89,7 @@ init_group_options (void)
 }
 
 static void
-log_manifest(const TIUBundle *bundle)
+read_manifest(const TIUBundle *bundle, gchar **format)
 {
   gchar *filename = g_strjoin("/", bundle->mount_point, MANIFEST_TIU, NULL);
   econf_file *key_file = NULL;
@@ -142,12 +149,27 @@ log_manifest(const TIUBundle *bundle)
       free(value);
     }
 
+  if ((econf_err = econf_getStringValue (key_file, "global", "FORMAT",
+					 &value)))
+    {
+      g_fprintf (stderr,
+		 "ERROR: Cannot read archive format: %s\n",
+		 econf_errString(econf_err));
+      exit (1);
+    }
+  else
+    {
+      g_printf (", format: %s\n", value);
+      *format = value;
+    }
+
   econf_free (key_file);
 }
 
 static void
 read_config(const gchar *kind, const gchar *disk_layout_format,
-	    gchar **archive, gchar **archive_md5sum, gchar **disk_layout)
+	    gchar **archive, gchar **archive_md5sum, gchar **disk_layout,
+	    gchar **config_store)
 {
    econf_file *key_file = NULL;
    econf_err ecerror;
@@ -162,7 +184,6 @@ read_config(const gchar *kind, const gchar *disk_layout_format,
       g_fprintf (stderr, "ERROR: While reading tiu.conf file: %s\n", econf_errString(ecerror));
       exit (1);
    }
-
    /* only read archive is not specified on commandline */
    if (*archive == NULL)
      {
@@ -198,13 +219,19 @@ read_config(const gchar *kind, const gchar *disk_layout_format,
    if (ecerror != ECONF_SUCCESS)
       econf_getStringValue(key_file, "global", "archive_md5sum", archive_md5sum);
 
+   ecerror = econf_getStringValue(key_file, kind, "store", config_store);
+   if (ecerror != ECONF_SUCCESS)
+      econf_getStringValue(key_file, "global", "store", config_store);
+
    econf_free (key_file);
 }
 
 static gboolean
-download_check_mount(const gchar *tiuname, const gchar *archive_md5sum, TIUBundle **bundle)
+download_check_mount(const gchar *tiuname, const gchar *archive_md5sum, TIUBundle **bundle,
+		     const gchar *config_store, gchar **store)
 {
   GError *error = NULL;
+  gchar *archive_format = NULL;
 
   if (!download_tiu_archive (tiuname, archive_md5sum, bundle, &error))
     {
@@ -242,6 +269,21 @@ download_check_mount(const gchar *tiuname, const gchar *archive_md5sum, TIUBundl
       return FALSE;
     }
 
+  read_manifest(*bundle, &archive_format);
+
+  if (strcmp(archive_format, CAIDX) == 0) {
+     if (*store == NULL) {
+	/* taking store from the tiu.conf file */
+	*store = g_strdup(config_store);
+     }
+     if (*store == NULL) {
+	g_fprintf (stderr, "ERROR: Store URL not given for tiuidx format.\n");
+	return FALSE;
+     } else {
+        g_printf ("Taking store: %s\n", *store);
+     }
+  }
+
   return TRUE;
 }
 
@@ -251,6 +293,7 @@ main(int argc, char **argv)
   gboolean help = FALSE, version = FALSE;
   gchar *archive_md5sum = NULL;
   gchar *disk_layout = NULL;
+  gchar *config_store = NULL;
   g_autoptr(GOptionContext) context = NULL;
   GError *error = NULL;
   GOptionEntry options[] = {
@@ -289,6 +332,13 @@ main(int argc, char **argv)
   /* If debug is choosen, enable verbose logs, too */
   if (debug_flag)
     verbose_flag = 1;
+
+  /* Generate log directory */
+  if (g_mkdir_with_parents(LOG, 0700) != 0)
+    {
+       g_fprintf (stderr, "ERROR: Cannot create %s!\n", LOG);
+       exit (1);
+    }
 
   if (version)
     {
@@ -332,7 +382,8 @@ main(int argc, char **argv)
     {
       TIUBundle *bundle = NULL;
 
-      read_config(EXTRACT, NULL, &squashfs_file, &archive_md5sum, &disk_layout);
+      read_config(EXTRACT, NULL, &squashfs_file, &archive_md5sum, &disk_layout,
+		  &config_store);
 
       if (target_dir == NULL)
 	{
@@ -346,10 +397,11 @@ main(int argc, char **argv)
 	  exit (1);
 	}
 
-      if (!download_check_mount (squashfs_file, archive_md5sum, &bundle))
+      if (!download_check_mount (squashfs_file, archive_md5sum, &bundle,
+				 config_store, &chunk_store))
       	exit (1);
 
-      if (!extract_image(bundle, target_dir, &error))
+      if (!extract_image(bundle, target_dir, chunk_store, &error))
 	{
 	  if (error)
 	    {
@@ -396,7 +448,8 @@ main(int argc, char **argv)
 	  schema = TIU_USR_AB;
 	}
 
-      read_config(INSTALL, disk_layout_format, &squashfs_file, &archive_md5sum, &disk_layout);
+      read_config(INSTALL, disk_layout_format, &squashfs_file, &archive_md5sum,
+		  &disk_layout, &config_store);
 
       if (device == NULL)
 	{
@@ -404,16 +457,15 @@ main(int argc, char **argv)
 	  exit (1);
 	}
 
-      if (!download_check_mount (squashfs_file, archive_md5sum, &bundle))
+      if (!download_check_mount (squashfs_file, archive_md5sum, &bundle,
+				 config_store, &chunk_store))
 	exit (1);
-
-      log_manifest (bundle);
 
       if (verbose_flag)
         g_printf("Installing %s with disk layout described in %s\n",
 	         bundle->path, disk_layout);
 
-      if (!install_system (bundle, device, schema, disk_layout, &error))
+      if (!install_system (bundle, device, schema, disk_layout, chunk_store, &error))
 	{
 	  if (error)
 	    {
@@ -435,12 +487,14 @@ main(int argc, char **argv)
     {
       TIUBundle *bundle = NULL;
 
-      read_config(UPDATE, NULL, &squashfs_file, &archive_md5sum, &disk_layout);
+      read_config(UPDATE, NULL, &squashfs_file, &archive_md5sum, &disk_layout,
+		  &config_store);
 
-      if (!download_check_mount (squashfs_file, archive_md5sum, &bundle))
+      if (!download_check_mount (squashfs_file, archive_md5sum, &bundle,
+				 config_store, &chunk_store))
 	exit (1);
 
-      if (!update_system (bundle, &error))
+      if (!update_system (bundle, chunk_store, &error))
 	{
 	  if (error)
 	    {

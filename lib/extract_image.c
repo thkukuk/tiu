@@ -6,7 +6,7 @@
 #include "tiu-internal.h"
 
 gboolean
-extract_image(TIUBundle *bundle, const gchar *outputdir,
+extract_image(TIUBundle *bundle, const gchar *outputdir, const gchar *store,
 	      GError **error)
 {
   GError *ierror = NULL;
@@ -51,7 +51,6 @@ extract_image(TIUBundle *bundle, const gchar *outputdir,
     }
 
   gchar *inputfile = g_strjoin("/", bundle->mount_point, archive_name, NULL);
-  gchar *store = NULL;
   if (!casync_extract(inputfile, outputdir, store, NULL, &ierror))
     {
       g_propagate_error(error, ierror);

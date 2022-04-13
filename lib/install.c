@@ -25,7 +25,6 @@
 #include "tiu-errors.h"
 
 #define LIBEXEC_TIU "/usr/libexec/tiu/"
-#define LOG "/var/log/"
 
 static gboolean
 exec_script (const gchar *script, const gchar *device, GError **error,
@@ -163,7 +162,9 @@ cleanup_install (TIUBundle *bundle)
 gboolean
 install_system (TIUBundle *bundle, const gchar *device,
 		TIUPartSchema schema,
-		const gchar *disk_layout, GError **error)
+		const gchar *disk_layout,
+		const gchar *store,
+		GError **error)
 {
   GError *ierror = NULL;
   gboolean retval = FALSE;
@@ -235,7 +236,7 @@ install_system (TIUBundle *bundle, const gchar *device,
 	}
     }
 
-  if (!extract_image(bundle, "/mnt/usr", &ierror))
+  if (!extract_image(bundle, "/mnt/usr", store, &ierror))
     {
       if (ierror)
 	g_propagate_error(error, ierror);

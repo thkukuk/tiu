@@ -439,9 +439,9 @@ create_image (const gchar *input, GError **gerror)
   rm_dir_content("usr/local", tmpdir, gerror);
 
   gchar *pvers = g_strjoin("-", product_name, version_id, NULL);
-  gchar *pvers_idx = g_strjoin(".", pvers, "caidx", NULL);
-  gchar *pvers_str = g_strjoin(".", pvers, "castr", NULL);
-  gchar *pvers_tar = g_strjoin(".", pvers, "catar", NULL);
+  gchar *pvers_idx = g_strjoin(".", pvers, CAIDX, NULL);
+  gchar *pvers_str = g_strjoin(".", pvers, CASTR, NULL);
+  gchar *pvers_tar = g_strjoin(".", pvers, CATAR, NULL);
 
   if (!casync_make (tmpdir, pvers_idx, pvers_str, gerror))
     {
