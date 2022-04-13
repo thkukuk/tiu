@@ -51,6 +51,7 @@ libtiu_src = files(
   'lib/create_images.c',
   'lib/dm.c',
   'lib/install.c',
+  'lib/mount.c',
   'lib/mount_archive.c',
   'lib/network.c',
   'lib/rm_rf.c',
