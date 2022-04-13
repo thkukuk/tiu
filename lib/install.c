@@ -22,6 +22,7 @@
 
 #include "tiu.h"
 #include "tiu-internal.h"
+#include "tiu-mount.h"
 #include "tiu-errors.h"
 
 #define LIBEXEC_TIU "/usr/libexec/tiu/"
