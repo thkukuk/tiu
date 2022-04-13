@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 ROOTDIR=/mnt
 
@@ -19,7 +19,7 @@ do
     esac
 done
 
-source $(dirname $0)/logging
+. $(dirname $0)/logging
 
 if [ -z "$device" ]; then
     printf "Usage: %s: -d device -o logfile\n" "$0"
@@ -32,15 +32,6 @@ run "cp -av ${ROOTDIR}/usr/share/factory/etc/grub.d ${ROOTDIR}/etc/"
 # Create input variables for grub.cfg
 run "mkdir -p ${ROOTDIR}/etc/default"
 run "cp -av ${ROOTDIR}/usr/share/factory/etc/default/grub ${ROOTDIR}/etc/default/grub"
-
-# Mount /dev, /sys and /proc to be able to create initrd and
-# install bootloader
-run "mount --rbind /dev ${ROOTDIR}/dev"
-run "mount --make-rslave ${ROOTDIR}/dev"
-run "mount --rbind /sys ${ROOTDIR}/sys"
-run "mount --make-rslave ${ROOTDIR}/sys"
-run "mount --rbind /proc ${ROOTDIR}/proc"
-run "mount --make-rslave ${ROOTDIR}/proc"
 
 # Install the kernel
 for i in "${ROOTDIR}"/usr/lib/modules/* ; do

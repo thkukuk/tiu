@@ -105,21 +105,9 @@ setup_chroot (const gchar *target, GError **error)
 {
   GError *ierror = NULL;
 
-  for (size_t i = 0; i < sizeof(devices) / sizeof(devices[0]); i++)
-    {
-      if (debug_flag)
-	printf ("Mount %s into %s...\n", devices[i], target);
-
-      if (!bind_mount(devices[i], target, NULL, &ierror))
-	{
-	  g_propagate_error(error, ierror);
-	  umount_chroot (target, TRUE, &ierror);
-	  return FALSE;
-	}
-    }
-
   /* bind mount the whole stuff below /var/lib/tiu to make
      grub2-mkconfig working */
+  /* XXX make TIU_ROOT_DIR configureable function argument */
   if (!g_file_test(TIU_ROOT_DIR, G_FILE_TEST_IS_DIR))
     {
       gint ret;
@@ -139,6 +127,20 @@ setup_chroot (const gchar *target, GError **error)
       umount_chroot (target, TRUE, &ierror);
       return FALSE;
     }
+
+  for (size_t i = 0; i < sizeof(devices) / sizeof(devices[0]); i++)
+    {
+      if (debug_flag)
+	printf ("Mount %s into %s...\n", devices[i], TIU_ROOT_DIR);
+
+      if (!bind_mount(devices[i], TIU_ROOT_DIR, NULL, &ierror))
+	{
+	  g_propagate_error(error, ierror);
+	  umount_chroot (TIU_ROOT_DIR, TRUE, &ierror);
+	  return FALSE;
+	}
+    }
+
 
   return TRUE;
 }

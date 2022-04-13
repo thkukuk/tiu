@@ -252,6 +252,12 @@ install_system (TIUBundle *bundle, const gchar *device,
       goto cleanup;
     }
 
+  if (!setup_chroot ("/mnt", &ierror))
+    {
+      g_propagate_error(error, ierror);
+      goto cleanup;
+    }
+
   if (!exec_script (LIBEXEC_TIU"setup-bootloader", device,
 		    &ierror, NULL, LOG"tiu-setup-bootloader.log"))
     {
@@ -269,6 +275,7 @@ install_system (TIUBundle *bundle, const gchar *device,
   retval = TRUE;
 
  cleanup:
+  umount_chroot(TIU_ROOT_DIR, TRUE, NULL);
   cleanup_install (bundle);
 
   return retval;
