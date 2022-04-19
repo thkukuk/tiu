@@ -27,6 +27,8 @@ extern "C" {
 extern gboolean bind_mount (const gchar *source, const gchar *target, const gchar *dir, GError **error);
 extern gboolean setup_chroot (const gchar *target, GError **error);
 extern gboolean umount_chroot (const gchar *target, gboolean force, GError **error);
+extern gboolean is_mounted (const gchar *target, GError **error);
+
 
 #ifdef __cplusplus
 }

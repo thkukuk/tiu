@@ -1,4 +1,4 @@
-/*  Copyright (C) 2021  Thorsten Kukuk <kukuk@suse.com>
+/*  Copyright (C) 2021,2022 Thorsten Kukuk <kukuk@suse.com>
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
@@ -114,24 +114,26 @@ cleanup_install (TIUBundle *bundle)
        g_clear_error(&ierror);
      }
 
-   { /* XXX 2x same code, move in a function */
-     if (verbose_flag)
-       g_printf("  * unmount /mnt/usr...\n");
+   /* if /usr is mounted, umount that first, could shadow /usr/local */
+   if (is_mounted ("/mnt/usr", &ierror))
+     { /* XXX 2x same code, move in a function */
+       if (verbose_flag)
+	 g_printf("  * unmount /mnt/usr...\n");
 
-     GPtrArray *args = g_ptr_array_new_full(4, g_free);
-     g_ptr_array_add(args, "umount");
-     g_ptr_array_add(args, "-R");
-     g_ptr_array_add(args, "/mnt/usr");
-     g_ptr_array_add(args, NULL);
-     sproc = g_subprocess_newv((const gchar * const *)args->pdata,
-			       G_SUBPROCESS_FLAGS_STDOUT_SILENCE, &ierror);
-     if (sproc != NULL)
-	  {
-	    g_subprocess_wait_check(sproc, NULL, &ierror);
-	  }
-     g_ptr_array_free(args, FALSE);
-     g_clear_error(&ierror);
-   }
+       GPtrArray *args = g_ptr_array_new_full(4, g_free);
+       g_ptr_array_add(args, "umount");
+       g_ptr_array_add(args, "-R");
+       g_ptr_array_add(args, "/mnt/usr");
+       g_ptr_array_add(args, NULL);
+       sproc = g_subprocess_newv((const gchar * const *)args->pdata,
+				 G_SUBPROCESS_FLAGS_STDOUT_SILENCE, &ierror);
+       if (sproc != NULL)
+	 {
+	   g_subprocess_wait_check(sproc, NULL, &ierror);
+	 }
+       g_ptr_array_free(args, FALSE);
+       g_clear_error(&ierror);
+     }
    {
      if (verbose_flag)
        g_printf("  * unmount /mnt\n");
