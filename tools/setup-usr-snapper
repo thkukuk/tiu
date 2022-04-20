@@ -9,9 +9,6 @@ log_info "USRDEV = $USRDEV"
 run "snapper -c usr create-config ${ROOTDIR}/os"
 run "snapper -c usr create"
 
+# Add fstab entries
 run "echo \"${USRDEV}  /os/.snapshots          btrfs  subvol=/.snapshots             0  0\" >> ${ROOTDIR}/etc/fstab"
-
-# Create usr subdirectory, so that casync can extract archive
-run "mkdir -p ${ROOTDIR}/os/.snapshots/1/snapshot/usr"
-run "mount -o bind ${ROOTDIR}/os/.snapshots/1/snapshot/usr ${ROOTDIR}/usr"
 run "echo \"/sysroot/os/.snapshots/1/snapshot/usr      /usr                    none   bind,ro,x-initrd.mount         0  0\" >> ${ROOTDIR}/etc/fstab"

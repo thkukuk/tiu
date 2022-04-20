@@ -170,6 +170,7 @@ install_system (TIUBundle *bundle, const gchar *device,
 		const gchar *store,
 		GError **error)
 {
+  const gchar *usr_snapshot = "/mnt/os/.snapshots/1/snapshot";
   GError *ierror = NULL;
   gboolean retval = FALSE;
 
@@ -218,11 +219,29 @@ install_system (TIUBundle *bundle, const gchar *device,
 	  goto cleanup;
 	}
 
-      if (!btrfs_set_readonly ("/mnt/os/.snapshots/1/snapshot", FALSE, &ierror))
+      if (!btrfs_set_readonly (usr_snapshot, FALSE, &ierror))
 	{
 	  g_propagate_error(error, ierror);
 	  goto cleanup;
 	}
+
+      gchar *usr_mkdir = g_strjoin("/", usr_snapshot, "usr", NULL);
+      if (g_mkdir(usr_mkdir, 0755) != 0)
+        {
+          g_set_error(error, G_FILE_ERROR, G_FILE_ERROR_FAILED,
+                      "Failed creating mount path '%s'", usr_mkdir);
+	  free (usr_mkdir);
+	  goto cleanup;
+        }
+
+      if (!bind_mount(usr_mkdir, "/mnt", "usr", &ierror))
+	{
+	  g_propagate_error(error, ierror);
+	  free (usr_mkdir);
+	  goto cleanup;
+	}
+
+      free (usr_mkdir);
     }
   else
     {
@@ -257,7 +276,6 @@ install_system (TIUBundle *bundle, const gchar *device,
 
   if (schema == TIU_USR_BTRFS)
     {
-      const gchar *usr_snapshot = "/mnt/os/.snapshots/1/snapshot";
       gchar *subvol_id = NULL;
 
       if (!btrfs_set_readonly (usr_snapshot, TRUE, &ierror))
