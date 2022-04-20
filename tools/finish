@@ -1,6 +1,6 @@
-#!/bin/bash
+#!/bin/sh
 
-source $(dirname $0)/logging
+. $(dirname $0)/logging
 
 ROOTDIR=/mnt
 
@@ -14,7 +14,3 @@ run "chroot ${ROOTDIR} chown root:systemd-journal /var/log/journal"
 run "mkdir -p ${ROOTDIR}/var/lib/YaST2"
 run "touch ${ROOTDIR}/var/lib/YaST2/reconfig_system"
 
-if [ -d ${ROOTDIR}/os ]; then
-    # Switch subvolume back to read-only
-    run "btrfs property set ${ROOTDIR}/os/.snapshots/1/snapshot ro true"
-fi

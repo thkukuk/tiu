@@ -8,7 +8,6 @@ USRDEV=$(awk '!/^#/ && ($2 == "/os") { print $1 }' ${ROOTDIR}/etc/fstab)
 log_info "USRDEV = $USRDEV"
 run "snapper -c usr create-config ${ROOTDIR}/os"
 run "snapper -c usr create"
-run "btrfs property set ${ROOTDIR}/os/.snapshots/1/snapshot ro false"
 
 run "echo \"${USRDEV}  /os/.snapshots          btrfs  subvol=/.snapshots             0  0\" >> ${ROOTDIR}/etc/fstab"
 

@@ -22,6 +22,7 @@
 
 #include "tiu.h"
 #include "tiu-internal.h"
+#include "tiu-btrfs.h"
 #include "tiu-mount.h"
 #include "tiu-errors.h"
 
@@ -216,6 +217,12 @@ install_system (TIUBundle *bundle, const gchar *device,
 	  g_propagate_error(error, ierror);
 	  goto cleanup;
 	}
+
+      if (!btrfs_set_readonly ("/mnt/os/.snapshots/1/snapshot", FALSE, &ierror))
+	{
+	  g_propagate_error(error, ierror);
+	  goto cleanup;
+	}
     }
   else
     {
@@ -246,6 +253,22 @@ install_system (TIUBundle *bundle, const gchar *device,
       else
 	g_fprintf (stderr, "ERROR: installing the archive failed!\n");
       goto cleanup;
+    }
+
+  if (schema == TIU_USR_BTRFS)
+    {
+      const gchar *usr_snapshot = "/mnt/os/.snapshots/1/snapshot";
+      gchar *subvol_id = NULL;
+
+      if (!btrfs_set_readonly (usr_snapshot, TRUE, &ierror))
+	{
+	  g_propagate_error(error, ierror);
+	  goto cleanup;
+	}
+
+      btrfs_get_subvolume_id (usr_snapshot, &subvol_id, &ierror);
+      btrfs_set_default (subvol_id, usr_snapshot, &ierror);
+      free (subvol_id);
     }
 
   if (!exec_script (LIBEXEC_TIU"/populate-etc", device,
