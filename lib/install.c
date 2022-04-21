@@ -79,8 +79,10 @@ exec_script (const gchar *script, const gchar *device, GError **error,
   return TRUE;
 }
 
+/* XXX make this available in mount.c as rec_umount and merge with
+   umount_chroot() */
 static void
-unmount(const gchar *mountpoint)
+rec_umount(const gchar *mountpoint)
 {
    g_autoptr (GSubprocess) sproc = NULL;
    GError *ierror = NULL;
@@ -140,8 +142,10 @@ cleanup_install (TIUBundle *bundle)
        g_clear_error(&ierror);
      }
 
-   unmount("/mnt/usr");
-   unmount("/mnt");
+   /* if /usr is mounted, umount that first, could shadow /usr/local */
+   if (is_mounted ("/mnt/usr", &ierror))
+     rec_umount("/mnt/usr");
+   rec_umount("/mnt");
 
    if (bundle->mount_point != NULL)
      {
