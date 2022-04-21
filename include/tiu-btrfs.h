@@ -22,13 +22,9 @@
 extern "C" {
 #endif
 
-#define TIU_ROOT_DIR "/var/lib/tiu/root"
-
-extern gboolean bind_mount (const gchar *source, const gchar *target, const gchar *dir, GError **error);
-	extern gboolean setup_chroot (const gchar *target, const gchar *root_dir, GError **error);
-extern gboolean umount_chroot (const gchar *target, gboolean force, GError **error);
-extern gboolean is_mounted (const gchar *target, GError **error);
-
+extern gboolean btrfs_set_readonly (const gchar *path, gboolean ro, GError **error);
+extern gboolean btrfs_get_subvolume_id (const gchar *snapshot_dir, const gchar *mountpoint, gchar **output, GError **error);
+extern gboolean btrfs_set_default (const gchar *btrfs_id, const gchar *path, GError **error);
 
 #ifdef __cplusplus
 }

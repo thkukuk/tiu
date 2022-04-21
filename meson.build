@@ -44,12 +44,13 @@ possible_cc_flags = [
 add_project_arguments(cc.get_supported_arguments(possible_cc_flags), language : 'c')
 
 libtiu_src = files(
-  'lib/extract_image.c',
+  'lib/btrfs.c',
   'lib/casync_extract.c',
   'lib/casync_make.c',
   'lib/check_archive.c',
   'lib/create_images.c',
   'lib/dm.c',
+  'lib/extract_image.c',
   'lib/install.c',
   'lib/mount.c',
   'lib/mount_archive.c',

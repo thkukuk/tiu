@@ -1,6 +1,6 @@
 #!/bin/sh
 
-ROOTDIR=/mnt
+ROOTDIR=/var/lib/tiu/root
 
 device=
 while getopts ":d:o:" arg

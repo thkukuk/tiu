@@ -16,12 +16,52 @@
 
 #include <errno.h>
 #include <stdio.h>
+#include <sys/stat.h>
 #include <sys/mount.h>
 
 #include "tiu-internal.h"
 #include "tiu-mount.h"
 
 static char *devices[] = {"/dev", "/proc", "/sys"};
+
+gboolean
+is_mounted (const gchar *target, GError **error)
+{
+  struct stat st_mountpoint;
+  struct stat st_parent;
+
+  /* Get the stat structure of the directory...*/
+  if (stat(target, &st_mountpoint) == -1)
+    {
+      int err = errno;
+      g_set_error(error, G_FILE_ERROR, g_file_error_from_errno(err),
+                  "failed to stat mountpoint %s: %s",
+                  target, g_strerror(err));
+      return FALSE;
+    }
+
+  gchar *parent = g_strjoin ("/", target, "..", NULL);
+  /* ... and its parent. */
+  if (stat(parent, &st_parent) == -1)
+    {
+      int err = errno;
+      g_set_error(error, G_FILE_ERROR, g_file_error_from_errno(err),
+                  "failed to stat mountpoint %s: %s",
+                  parent, g_strerror(err));
+      free (parent);
+      return FALSE;
+    }
+  free (parent);
+
+/* Compare the st_dev fields in the results: if they are
+   equal, then both the directory and its parent belong
+   to the same filesystem, and so the directory is not
+   currently a mount point. */
+  if (st_mountpoint.st_dev == st_parent.st_dev)
+    return FALSE;
+  else
+    return TRUE;
+}
 
 gboolean
 bind_mount (const gchar *source, const gchar *target, const gchar *dir,
