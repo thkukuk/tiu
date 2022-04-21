@@ -78,6 +78,31 @@ exec_script (const gchar *script, const gchar *device, GError **error,
   return TRUE;
 }
 
+static void
+unmount(const gchar *mountpoint)
+{
+   g_autoptr (GSubprocess) sproc = NULL;
+   GError *ierror = NULL;
+
+   if (mountpoint == NULL) return;
+   if (verbose_flag)
+     g_printf("  * unmount %s...\n", mountpoint);
+
+   GPtrArray *args = g_ptr_array_new_full(4, g_free);
+   g_ptr_array_add(args, "umount");
+   g_ptr_array_add(args, "-R");
+   g_ptr_array_add(args,  g_strdup(mountpoint));
+   g_ptr_array_add(args, NULL);
+   sproc = g_subprocess_newv((const gchar * const *)args->pdata,
+			     G_SUBPROCESS_FLAGS_STDOUT_SILENCE, &ierror);
+   if (sproc != NULL)
+     {
+       g_subprocess_wait_check(sproc, NULL, &ierror);
+     }
+   g_ptr_array_free(args, FALSE);
+   g_clear_error(&ierror);
+}
+
 /* This function is called after installation to cleanup leftovers.
    Goal should be that you can call the tiu installer as often as you wish. */
 static void
@@ -114,42 +139,8 @@ cleanup_install (TIUBundle *bundle)
        g_clear_error(&ierror);
      }
 
-   { /* XXX 2x same code, move in a function */
-     if (verbose_flag)
-       g_printf("  * unmount /mnt/usr...\n");
-
-     GPtrArray *args = g_ptr_array_new_full(4, g_free);
-     g_ptr_array_add(args, "umount");
-     g_ptr_array_add(args, "-R");
-     g_ptr_array_add(args, "/mnt/usr");
-     g_ptr_array_add(args, NULL);
-     sproc = g_subprocess_newv((const gchar * const *)args->pdata,
-			       G_SUBPROCESS_FLAGS_STDOUT_SILENCE, &ierror);
-     if (sproc != NULL)
-	  {
-	    g_subprocess_wait_check(sproc, NULL, &ierror);
-	  }
-     g_ptr_array_free(args, FALSE);
-     g_clear_error(&ierror);
-   }
-   {
-     if (verbose_flag)
-       g_printf("  * unmount /mnt\n");
-
-     GPtrArray *args = g_ptr_array_new_full(4, g_free);
-     g_ptr_array_add(args, "umount");
-     g_ptr_array_add(args, "-R");
-     g_ptr_array_add(args, "/mnt");
-     g_ptr_array_add(args, NULL);
-     sproc = g_subprocess_newv((const gchar * const *)args->pdata,
-			       G_SUBPROCESS_FLAGS_STDOUT_SILENCE, &ierror);
-     if (sproc != NULL)
-       {
-	 g_subprocess_wait_check(sproc, NULL, &ierror);
-       }
-     g_ptr_array_free(args, FALSE);
-     g_clear_error(&ierror);
-   }
+   unmount("/mnt/usr");
+   unmount("/mnt");
 
    if (bundle->mount_point != NULL)
      {
@@ -253,7 +244,7 @@ install_system (TIUBundle *bundle, const gchar *device,
       goto cleanup;
     }
 
-  if (!setup_chroot ("/mnt", &ierror))
+  if (!setup_chroot (NULL, "/mnt", &ierror))
     {
       g_propagate_error(error, ierror);
       goto cleanup;

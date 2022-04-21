@@ -53,7 +53,7 @@ if [ -z "$logfile" ]; then
     done
     # fallback
     if [ -z "$logfile" ]; then
-       logfile="/var/log/tiu.log"
+       logfile="/var/log/tiu/tiu.log"
     fi
 fi
 

@@ -429,9 +429,9 @@ update_system_usr_btrfs (TIUBundle *bundle, const gchar *store, GError **error)
       return FALSE;
     }
 
-  gchar *root_path = g_strjoin("/", "/.snapshots",
-			      snapshot_root, "snapshot", NULL);
-  if (!btrfs_set_readonly (root_path, false, &ierror))
+  gchar *snapshot_root_path = g_strjoin("/", "/.snapshots",
+					snapshot_root, "snapshot", NULL);
+  if (!btrfs_set_readonly (snapshot_root_path, false, &ierror))
     {
       g_propagate_error(error, ierror);
       retval = FALSE;
@@ -474,14 +474,14 @@ update_system_usr_btrfs (TIUBundle *bundle, const gchar *store, GError **error)
       goto cleanup;
     }
 
-  if (!adjust_etc_fstab_usr_btrfs (root_path, snapshot_usr, &ierror))
+  if (!adjust_etc_fstab_usr_btrfs (snapshot_root_path, snapshot_usr, &ierror))
     {
       g_propagate_error(error, ierror);
       retval = FALSE;
       goto cleanup;
     }
 
-  if (!setup_chroot (root_path, &ierror))
+  if (!setup_chroot (snapshot_root_path, TIU_ROOT_DIR, &ierror))
     {
       g_propagate_error(error, ierror);
       retval = FALSE;
@@ -525,8 +525,8 @@ update_system_usr_btrfs (TIUBundle *bundle, const gchar *store, GError **error)
       goto cleanup;
     }
 
-  btrfs_get_subvolume_id (root_path, &subvol_id, &ierror);
-  btrfs_set_default (subvol_id, root_path, &ierror);
+  btrfs_get_subvolume_id (snapshot_root_path, &subvol_id, &ierror);
+  btrfs_set_default (subvol_id, snapshot_root_path, &ierror);
 
  cleanup:
   if (ierror != NULL)
@@ -675,9 +675,9 @@ update_system_usr_AB (TIUBundle *bundle __attribute__((unused)),
   /* touch /usr for systemd */
   utimensat(AT_FDCWD, mountpoint, NULL, 0);
 
-  gchar *root_path = g_strjoin("/", "/.snapshots",
-			       snapshot_root, "snapshot", NULL);
-  if (!btrfs_set_readonly (root_path, false, &ierror))
+  gchar *snapshot_root_path = g_strjoin("/", "/.snapshots",
+					snapshot_root, "snapshot", NULL);
+  if (!btrfs_set_readonly (snapshot_root_path, false, &ierror))
     {
       g_propagate_error(error, ierror);
       retval = FALSE;
@@ -685,7 +685,7 @@ update_system_usr_AB (TIUBundle *bundle __attribute__((unused)),
     }
 
 #if 0
-  if (!adjust_etc_fstab_usr_AB (root_path, snapshot_usr, &ierror))
+  if (!adjust_etc_fstab_usr_AB (snapshot_root_path, snapshot_usr, &ierror))
     {
       g_propagate_error(error, ierror);
       retval = FALSE;
@@ -707,8 +707,8 @@ update_system_usr_AB (TIUBundle *bundle __attribute__((unused)),
       goto cleanup;
     }
 
-  btrfs_get_subvolume_id (root_path, &subvol_id, &ierror);
-  btrfs_set_default (subvol_id, root_path, &ierror);
+  btrfs_get_subvolume_id (snapshot_root_path, &subvol_id, &ierror);
+  btrfs_set_default (subvol_id, snapshot_root_path, &ierror);
 
  cleanup:
   if (device)

@@ -25,7 +25,7 @@ extern "C" {
 #define TIU_ROOT_DIR "/var/lib/tiu/root"
 
 extern gboolean bind_mount (const gchar *source, const gchar *target, const gchar *dir, GError **error);
-extern gboolean setup_chroot (const gchar *target, GError **error);
+	extern gboolean setup_chroot (const gchar *target, const gchar *root_dir, GError **error);
 extern gboolean umount_chroot (const gchar *target, gboolean force, GError **error);
 
 #ifdef __cplusplus

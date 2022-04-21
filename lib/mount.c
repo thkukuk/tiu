@@ -35,6 +35,9 @@ bind_mount (const gchar *source, const gchar *target, const gchar *dir,
   else
     target_path = g_strjoin("", target, source, NULL);
 
+  if (debug_flag)
+    printf ("Mount %s into %s...\n", source, target_path);
+
   if (mount(source, target_path, "bind", MS_BIND|MS_REC, NULL) < 0)
     {
       int err = errno;
@@ -101,27 +104,27 @@ umount_chroot (const gchar *target, gboolean force, GError **error)
 }
 
 gboolean
-setup_chroot (const gchar *target, GError **error)
+setup_chroot (const gchar *target, const gchar *root_dir, GError **error)
 {
   GError *ierror = NULL;
 
   /* bind mount the whole stuff below /var/lib/tiu to make
      grub2-mkconfig working */
-  /* XXX make TIU_ROOT_DIR configureable function argument */
-  if (!g_file_test(TIU_ROOT_DIR, G_FILE_TEST_IS_DIR))
+
+  if (!g_file_test(root_dir, G_FILE_TEST_IS_DIR))
     {
       gint ret;
-      ret = g_mkdir_with_parents(TIU_ROOT_DIR, 0700);
+      ret = g_mkdir_with_parents(root_dir, 0700);
 
       if (ret != 0)
         {
           g_set_error(error, G_FILE_ERROR, G_FILE_ERROR_FAILED,
-                      "Failed creating mount path '%s'", TIU_ROOT_DIR);
+                      "Failed creating mount path '%s'", root_dir);
           return FALSE;
         }
     }
 
-  if (!bind_mount(target, TIU_ROOT_DIR, "", &ierror))
+  if (target != NULL && !bind_mount(target, root_dir, "", &ierror))
     {
       g_propagate_error(error, ierror);
       umount_chroot (target, TRUE, &ierror);
@@ -130,13 +133,10 @@ setup_chroot (const gchar *target, GError **error)
 
   for (size_t i = 0; i < sizeof(devices) / sizeof(devices[0]); i++)
     {
-      if (debug_flag)
-	printf ("Mount %s into %s...\n", devices[i], TIU_ROOT_DIR);
-
-      if (!bind_mount(devices[i], TIU_ROOT_DIR, NULL, &ierror))
+      if (!bind_mount(devices[i], root_dir, NULL, &ierror))
 	{
 	  g_propagate_error(error, ierror);
-	  umount_chroot (TIU_ROOT_DIR, TRUE, &ierror);
+	  umount_chroot (root_dir, TRUE, &ierror);
 	  return FALSE;
 	}
     }

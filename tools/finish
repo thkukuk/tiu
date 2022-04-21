@@ -9,6 +9,9 @@ run "mkdir -p ${ROOTDIR}/var/log/journal"
 run "chmod 2755 ${ROOTDIR}/var/log/journal"
 run "chroot ${ROOTDIR} chown root:systemd-journal /var/log/journal"
 
+# Copy log file from inst-sys into installed/updated system
+run "cp -r /var/log/tiu ${ROOTDIR}/var/log"
+
 # XXX create file to run jeos-firstboot.
 # This needs to be solved in a better way...
 run "mkdir -p ${ROOTDIR}/var/lib/YaST2"
