@@ -1,7 +1,7 @@
 # Install:
-
 * SELinux support
 * Make sure we don't install on the disk we are running from
+* Cleanup /var/lib/tiu/mount
 
 # Update:
 * Check that the update images fits to the installed system and is newer
