@@ -23,7 +23,7 @@ extern "C" {
 #endif
 
 extern gboolean btrfs_set_readonly (const gchar *path, gboolean ro, GError **error);
-extern gboolean btrfs_get_subvolume_id (const gchar *snapshot_dir, gchar **output, GError **error);
+extern gboolean btrfs_get_subvolume_id (const gchar *snapshot_dir, const gchar *mountpoint, gchar **output, GError **error);
 extern gboolean btrfs_set_default (const gchar *btrfs_id, const gchar *path, GError **error);
 
 #ifdef __cplusplus

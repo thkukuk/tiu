@@ -284,8 +284,19 @@ install_system (TIUBundle *bundle, const gchar *device,
 	  goto cleanup;
 	}
 
-      btrfs_get_subvolume_id (usr_snapshot, &subvol_id, &ierror);
-      btrfs_set_default (subvol_id, usr_snapshot, &ierror);
+      if (!btrfs_get_subvolume_id (usr_snapshot, "/mnt/os/.snapshots",
+				   &subvol_id, &ierror))
+	{
+	  g_propagate_error(error, ierror);
+	  goto cleanup;
+	}
+
+      if (!btrfs_set_default (subvol_id, usr_snapshot, &ierror))
+	{
+	  g_propagate_error(error, ierror);
+	  goto cleanup;
+	}
+
       free (subvol_id);
     }
 

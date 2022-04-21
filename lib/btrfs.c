@@ -62,7 +62,7 @@ btrfs_set_readonly (const gchar *path, gboolean ro, GError **error)
 }
 
 gboolean
-btrfs_get_subvolume_id (const gchar *snapshot_dir, gchar **output, GError **error)
+btrfs_get_subvolume_id (const gchar *snapshot_dir, const gchar *mountpoint, gchar **output, GError **error)
 {
   gboolean retval = TRUE;
   g_autoptr (GSubprocess) sproc = NULL;
@@ -72,9 +72,8 @@ btrfs_get_subvolume_id (const gchar *snapshot_dir, gchar **output, GError **erro
   if (debug_flag)
     g_printf("Get subvolume ID for '%s'...\n", snapshot_dir);
 
-  gchar *sharg = g_strjoin(NULL, "btrfs subvolume list -o /.snapshots | grep ",
+  gchar *sharg = g_strjoin(NULL, "btrfs subvolume list -o ", mountpoint, " | grep ",
                            snapshot_dir, " | awk '{print $2}'", NULL);
-
 
   g_ptr_array_add(args, "/bin/sh");
   g_ptr_array_add(args, "-c");

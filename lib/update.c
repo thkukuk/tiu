@@ -376,8 +376,20 @@ update_system_usr_btrfs (TIUBundle *bundle, const gchar *store, GError **error)
       goto cleanup;
     }
 
-  btrfs_get_subvolume_id (root_path, &subvol_id, &ierror);
-  btrfs_set_default (subvol_id, root_path, &ierror);
+  if (!btrfs_get_subvolume_id (root_path, "/.snapshots",
+			       &subvol_id, &ierror))
+    {
+      g_propagate_error(error, ierror);
+      retval = FALSE;
+      goto cleanup;
+    }
+
+  if (!btrfs_set_default (subvol_id, root_path, &ierror))
+    {
+      g_propagate_error(error, ierror);
+      retval = FALSE;
+      goto cleanup;
+    }
 
  cleanup:
   if (ierror != NULL)
@@ -558,8 +570,20 @@ update_system_usr_AB (TIUBundle *bundle __attribute__((unused)),
       goto cleanup;
     }
 
-  btrfs_get_subvolume_id (root_path, &subvol_id, &ierror);
-  btrfs_set_default (subvol_id, root_path, &ierror);
+  if (!btrfs_get_subvolume_id (root_path, "/.snapshots",
+			       &subvol_id, &ierror))
+    {
+      g_propagate_error(error, ierror);
+      retval = FALSE;
+      goto cleanup;
+    }
+
+  if (!btrfs_set_default (subvol_id, root_path, &ierror))
+    {
+      g_propagate_error(error, ierror);
+      retval = FALSE;
+      goto cleanup;
+    }
 
  cleanup:
   if (device)
