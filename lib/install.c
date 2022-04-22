@@ -300,7 +300,7 @@ install_system (TIUBundle *bundle, const gchar *device,
       goto cleanup;
     }
 
-  if (!setup_chroot (NULL, "/mnt", &ierror))
+  if (!setup_chroot ("/mnt", TIU_ROOT_DIR, &ierror))
     {
       g_propagate_error(error, ierror);
       goto cleanup;
