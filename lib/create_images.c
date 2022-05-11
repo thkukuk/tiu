@@ -439,9 +439,11 @@ create_image (const gchar *input, GError **gerror)
   rm_dir_content("usr/local", tmpdir, gerror);
 
   gchar *pvers = g_strjoin("-", product_name, version_id, NULL);
+  gchar *pvers_tar = g_strjoin(".", pvers, CATAR, NULL);
+
+#if 0 /* XXX introduce --with-casync? */
   gchar *pvers_idx = g_strjoin(".", pvers, CAIDX, NULL);
   gchar *pvers_str = g_strjoin(".", pvers, CASTR, NULL);
-  gchar *pvers_tar = g_strjoin(".", pvers, CATAR, NULL);
 
   if (!casync_make (tmpdir, pvers_idx, pvers_str, gerror))
     {
@@ -458,6 +460,15 @@ create_image (const gchar *input, GError **gerror)
       cleanup (tmpdir);
       return FALSE;
     }
+#else
+    if (!desync_tar (tmpdir, pvers_tar, NULL, gerror))
+    {
+      if (debug_flag)
+	fprintf (stderr, "ERROR: no catar archive created, aborting...\n");
+      cleanup (tmpdir);
+      return FALSE;
+    }
+#endif
 
   econf_file *manifest;
   if ((error = econf_newKeyFile(&manifest, '=', '#')))
@@ -481,7 +492,9 @@ create_image (const gchar *input, GError **gerror)
 
   gchar *manifest_file = g_strjoin("/", tmpdir, "manifest.tiu", NULL);
   gchar *output_tiutar = g_strjoin(".", pvers, "tiutar", NULL);
+#if 0 /* XXX --with-casync */
   gchar *output_tiuidx = g_strjoin(".", pvers, "tiuidx", NULL);
+#endif
 
   if (!mksquashfs (manifest_file, pvers_tar, NULL, output_tiutar, gerror))
     {
@@ -489,6 +502,7 @@ create_image (const gchar *input, GError **gerror)
       return FALSE;
     }
 
+#if 0 /* XXX caidx not created yet */
   /* overwrite some values and create a tiuidx file */
   econf_setStringValue(manifest, "global", "FORMAT", "caidx");
   econf_setStringValue(manifest, "global", "ARCHIVE", pvers_idx);
@@ -501,12 +515,15 @@ create_image (const gchar *input, GError **gerror)
     }
 
   /* XXX error handling */
-  if (!calc_verity(output_tiutar, gerror))
+  if (!calc_verity(output_tiuidx, gerror))
     {
       cleanup (tmpdir);
       return FALSE;
     }
-  if (!calc_verity(output_tiuidx, gerror))
+#endif
+
+  /* XXX error handling */
+  if (!calc_verity(output_tiutar, gerror))
     {
       cleanup (tmpdir);
       return FALSE;

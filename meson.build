@@ -49,6 +49,7 @@ libtiu_src = files(
   'lib/casync_make.c',
   'lib/check_archive.c',
   'lib/create_images.c',
+  'lib/desync_tar.c',
   'lib/dm.c',
   'lib/extract_image.c',
   'lib/install.c',
