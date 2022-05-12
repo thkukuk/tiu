@@ -66,6 +66,7 @@ extern gboolean workdir_destroy (const gchar *workdir, GError **error);
 extern gboolean casync_make (const gchar *inputdir, const gchar *outfile, const gchar *store, GError **error);
 extern gboolean casync_extract(const gchar *input, const gchar *dest, const gchar *store, const gchar *seed, GError **error);
 extern gboolean desync_tar (const gchar *inputdir, const gchar *outfile, const gchar *store, GError **error);
+extern gboolean desync_untar(const gchar *input, const gchar *dest, const gchar *store, GError **error);
 extern gboolean rm_rf (GFile *file, GCancellable *cancellable, GError **error);
 
 #ifdef __cplusplus

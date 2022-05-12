@@ -51,7 +51,7 @@ extract_image(TIUBundle *bundle, const gchar *outputdir, const gchar *store,
     }
 
   gchar *inputfile = g_strjoin("/", bundle->mount_point, archive_name, NULL);
-  if (!casync_extract(inputfile, outputdir, store, NULL, &ierror))
+  if (!desync_untar(inputfile, outputdir, store, &ierror))
     {
       g_propagate_error(error, ierror);
       g_clear_error(&ierror);
