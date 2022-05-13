@@ -105,7 +105,7 @@ adjust_etc_fstab_usr_btrfs (const gchar *path, const gchar *snapshot_usr, GError
   if (debug_flag)
     g_printf("Adjusting '%s'...\n", fstab);
 
-  gchar *sedarg = g_strjoin(NULL, "s|subvol=/@/usr/.snapshots/.*/snapshot|subvol=/@/usr/.snapshots/",
+  gchar *sedarg = g_strjoin(NULL, "s|subvol=/.snapshots/.*/snapshot|subvol=/.snapshots/",
 			    snapshot_usr, "/snapshot|g", NULL);
 
   g_ptr_array_add(args, "sed");
@@ -307,8 +307,15 @@ update_system_usr_btrfs (TIUBundle *bundle, const gchar *store, GError **error)
       goto cleanup;
     }
 
-  /* XXX desync does not remove old files, it just untars the new data.
-     Remove everything ourself... */
+  /* desync does not remove old files, it just untars the new data.
+     Remove everything ourself...
+     This needs to be fixed with a better casync/desync replacement */
+  if (!rmdir_rf (usr_snapshot_path, NULL, &ierror))
+    {
+      g_propagate_error(error, ierror);
+      retval = FALSE;
+      goto cleanup;
+    }
 
   if (!extract_image(bundle, usr_snapshot_path, store, &ierror))
     {
@@ -316,6 +323,23 @@ update_system_usr_btrfs (TIUBundle *bundle, const gchar *store, GError **error)
       retval = FALSE;
       goto cleanup;
     }
+
+  /* make sure /usr/.snapshots mountpoint exist */
+  gchar *snapshots_dir = g_strjoin("/", usr_snapshot_path, ".snapshots", NULL);
+  if (!g_file_test(snapshots_dir, G_FILE_TEST_IS_DIR))
+    {
+      gint ret;
+      ret = g_mkdir_with_parents(snapshots_dir, 0750);
+
+      if (ret != 0)
+        {
+          g_set_error(error, G_FILE_ERROR, G_FILE_ERROR_FAILED,
+                      "Failed creating mount path '%s'", snapshots_dir);
+          return FALSE;
+        }
+    }
+  free (snapshots_dir);
+
 
   /* touch /usr for systemd */
   utimensat(AT_FDCWD, usr_snapshot_path, NULL, 0);

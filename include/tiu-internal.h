@@ -68,6 +68,7 @@ extern gboolean casync_extract(const gchar *input, const gchar *dest, const gcha
 extern gboolean desync_tar (const gchar *inputdir, const gchar *outfile, const gchar *store, GError **error);
 extern gboolean desync_untar(const gchar *input, const gchar *dest, const gchar *store, GError **error);
 extern gboolean rm_rf (GFile *file, GCancellable *cancellable, GError **error);
+extern gboolean rmdir_rf (const gchar *dir, GCancellable *cancellable, GError **error);
 
 #ifdef __cplusplus
 }
