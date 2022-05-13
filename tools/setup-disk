@@ -269,7 +269,7 @@ filesystems:
         - path: usr/local
   ${DEVICE1_P3}:
     filesystem: btrfs
-    mountpoint: /os
+    mountpoint: /usr
     mount_options: ['ro','x-initrd.mount']
   ${DEVICE1_P4}:
     filesystem: btrfs

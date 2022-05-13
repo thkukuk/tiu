@@ -6,7 +6,7 @@ ROOTDIR=/mnt
 
 USRDEV=$(awk '!/^#/ && ($2 == "/usr") { print $1 }' ${ROOTDIR}/etc/fstab)
 log_info "USRDEV = $USRDEV"
-run "snapper -c usr create-config ${ROOTDIR}/os"
+run "snapper -c usr create-config ${ROOTDIR}/usr"
 run "snapper -c usr setup-quota"
 run "snapper -c usr create"
 
