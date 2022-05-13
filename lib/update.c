@@ -105,7 +105,7 @@ adjust_etc_fstab_usr_btrfs (const gchar *path, const gchar *snapshot_usr, GError
   if (debug_flag)
     g_printf("Adjusting '%s'...\n", fstab);
 
-  gchar *sedarg = g_strjoin(NULL, "s|^/sysroot/os/.snapshots/.*/snapshot|/sysroot/os/.snapshots/",
+  gchar *sedarg = g_strjoin(NULL, "s|subvol=/@/usr/.snapshots/.*/snapshot|subvol=/@/usr/.snapshots/",
 			    snapshot_usr, "/snapshot|g", NULL);
 
   g_ptr_array_add(args, "sed");
@@ -289,6 +289,7 @@ update_system_usr_btrfs (TIUBundle *bundle, const gchar *store, GError **error)
       goto cleanup;
     }
 
+  /* Create snapshot for new /usr */
 
   if (!snapper_create ("usr", &snapshot_usr, &ierror))
     {
@@ -297,7 +298,7 @@ update_system_usr_btrfs (TIUBundle *bundle, const gchar *store, GError **error)
       goto cleanup;
     }
 
-  gchar *usr_snapshot_path = g_strjoin("/", "/os/.snapshots",
+  gchar *usr_snapshot_path = g_strjoin("/", "/usr/.snapshots",
 				       snapshot_usr, "snapshot", NULL);
   if (!btrfs_set_readonly (usr_snapshot_path, false, &ierror))
     {
@@ -306,8 +307,10 @@ update_system_usr_btrfs (TIUBundle *bundle, const gchar *store, GError **error)
       goto cleanup;
     }
 
-  gchar *usr_path = g_strjoin("/", usr_snapshot_path, "usr", NULL);
-  if (!extract_image(bundle, usr_path, store, &ierror))
+  /* XXX desync does not remove old files, it just untars the new data.
+     Remove everything ourself... */
+
+  if (!extract_image(bundle, usr_snapshot_path, store, &ierror))
     {
       g_propagate_error(error, ierror);
       retval = FALSE;
@@ -315,7 +318,7 @@ update_system_usr_btrfs (TIUBundle *bundle, const gchar *store, GError **error)
     }
 
   /* touch /usr for systemd */
-  utimensat(AT_FDCWD, usr_path, NULL, 0);
+  utimensat(AT_FDCWD, usr_snapshot_path, NULL, 0);
 
   /* make /usr snapshot readonly again */
   if (!btrfs_set_readonly (usr_snapshot_path, true, &ierror))
@@ -339,7 +342,7 @@ update_system_usr_btrfs (TIUBundle *bundle, const gchar *store, GError **error)
       goto cleanup;
     }
 
-  if (!bind_mount(usr_path, TIU_ROOT_DIR, "usr", &ierror))
+  if (!bind_mount(usr_snapshot_path, TIU_ROOT_DIR, "usr", &ierror))
     {
       g_propagate_error(error, ierror);
       retval = FALSE;
@@ -610,7 +613,7 @@ update_system_usr_AB (TIUBundle *bundle __attribute__((unused)),
 gboolean
 update_system (TIUBundle *bundle, const gchar *store, GError **error)
 {
-  if (access ("/os", F_OK) == 0)
+  if (access ("/usr/.snapshots", F_OK) == 0)
     return update_system_usr_btrfs (bundle, store, error);
   else
     return update_system_usr_AB (bundle, store, error);
