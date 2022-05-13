@@ -163,7 +163,6 @@ install_system (TIUBundle *bundle, const gchar *device,
 		const gchar *store,
 		GError **error)
 {
-  const gchar *usr_snapshot = "/mnt/usr/.snapshots/1/snapshot";
   GError *ierror = NULL;
   gboolean retval = FALSE;
 
@@ -251,7 +250,7 @@ install_system (TIUBundle *bundle, const gchar *device,
 
   if (schema == TIU_USR_BTRFS)
     {
-      if (!btrfs_set_readonly (usr_snapshot, TRUE, &ierror))
+      if (!btrfs_set_readonly ("/mnt/usr", TRUE, &ierror))
 	{
 	  g_propagate_error(error, ierror);
 	  goto cleanup;
