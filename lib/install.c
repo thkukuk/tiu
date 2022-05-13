@@ -212,31 +212,11 @@ install_system (TIUBundle *bundle, const gchar *device,
 	  goto cleanup;
 	}
 
-      if (!btrfs_set_readonly (usr_snapshot, FALSE, &ierror))
+      if (!btrfs_set_readonly ("/mnt/usr", FALSE, &ierror))
 	{
 	  g_propagate_error(error, ierror);
 	  goto cleanup;
 	}
-
-      /* Umount /mnt/usr to mount correct snapshot */
-      /* XXX save original used device? */
-      if (umount2 ("/mnt/usr", UMOUNT_NOFOLLOW))
-	{
-	  int err = errno;
-	  g_set_error(error, G_FILE_ERROR, g_file_error_from_errno(err),
-		      "failed to umount usr: %s", g_strerror(err));
-	  goto cleanup;
-	}
-
-      /* XXX use the saved original device instead of hardcoded vda3 */
-      if (mount("/dev/vda3", "/mnt/usr", "btrfs", MS_REMOUNT, "subvol=/.snapshots/1/snapshot"))
-	{
-	  int err = errno;
-	  g_set_error(&ierror, G_FILE_ERROR, g_file_error_from_errno(err),
-		      "failed to re-mount /usr read-write: %s", g_strerror(err));
-	  goto cleanup;
-	}
-
     }
   else
     {

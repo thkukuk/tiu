@@ -7,8 +7,11 @@ ROOTDIR=/mnt
 USRDEV=$(awk '!/^#/ && ($2 == "/usr") { print $1 }' ${ROOTDIR}/etc/fstab)
 log_info "USRDEV = $USRDEV"
 run "snapper -c usr create-config ${ROOTDIR}/usr"
-run "snapper -c usr setup-quota"
+#run "snapper -c usr setup-quota"
 run "snapper -c usr create"
 
+run "umount -R ${ROOTDIR}/usr"
+run "mount -o subvol=/.snapshots/1/snapshot ${USRDEV} ${ROOTDIR}/usr"
+run "sed -i -e 's|\(.*\s\)/usr\(\s.*\)|\1/usr btrfs  subvol=/.snapshots/1/snapshot,ro,x-initrd.mount 0 0|g' ${ROOTDIR}/etc/fstab"
 # Add fstab entries
-run "echo \"${USRDEV}  /usr/.snapshots          btrfs  subvol=/.snapshots,x-initrd.mount     0  0\" >> ${ROOTDIR}/etc/fstab"
+run "echo \"${USRDEV}  /usr/.snapshots          btrfs  subvol=/.snapshots     0  0\" >> ${ROOTDIR}/etc/fstab"
