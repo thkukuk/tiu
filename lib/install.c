@@ -237,12 +237,6 @@ install_system (TIUBundle *bundle, const gchar *device,
 	  goto cleanup;
 	}
 
-      /* XXXX */
-      if (!bind_mount(usr_mkdir, "/mnt", "usr", &ierror))
-	{
-	  g_propagate_error(error, ierror);
-	  goto cleanup;
-	}
     }
   else
     {
@@ -277,8 +271,6 @@ install_system (TIUBundle *bundle, const gchar *device,
 
   if (schema == TIU_USR_BTRFS)
     {
-      gchar *subvol_id = NULL;
-
       if (!btrfs_set_readonly (usr_snapshot, TRUE, &ierror))
 	{
 	  g_propagate_error(error, ierror);
