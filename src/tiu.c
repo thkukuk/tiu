@@ -141,11 +141,11 @@ read_manifest(const TIUBundle *bundle, gchar **format)
   if ((econf_err = econf_getStringValue (key_file, "global", "ARCH",
 					 &value)))
     {
-      g_printf ("--not defined--\n");
+      g_printf ("--not defined--");
     }
   else
     {
-      g_printf ("%s\n", value);
+      g_printf ("%s", value);
       free(value);
     }
 
