@@ -14,6 +14,7 @@
 
 # Building image:
 * Take the build number from the build environment and add it to the manifest
+* Add IMAGE_* tags to /etc/os-release
 
 # General:
 * Implement normal (means nearly sileng), verbose and debug mode/flags

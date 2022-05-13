@@ -21,7 +21,7 @@ run "chroot ${ROOTDIR} /usr/lib/snapper/installation-helper --step 4"
 
 # Adjust snapper "usr" config if it exist.
 if [ -f /etc/snapper/configs/usr ]; then
-  run "sed -e 's|/mnt/os|/os|g' /etc/snapper/configs/usr > ${ROOTDIR}/etc/snapper/configs/usr"
+  run "sed -e 's|/mnt/usr|/usr|g' /etc/snapper/configs/usr > ${ROOTDIR}/etc/snapper/configs/usr"
   run "sed -i -e 's|SNAPPER_CONFIGS=.*|SNAPPER_CONFIGS=\"root usr\"|g' ${ROOTDIR}/etc/sysconfig/snapper"
 fi
 

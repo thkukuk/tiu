@@ -163,7 +163,7 @@ install_system (TIUBundle *bundle, const gchar *device,
 		const gchar *store,
 		GError **error)
 {
-  const gchar *usr_snapshot = "/mnt/os/.snapshots/1/snapshot";
+  const gchar *usr_snapshot = "/mnt/usr/.snapshots/1/snapshot";
   GError *ierror = NULL;
   gboolean retval = FALSE;
 
@@ -218,23 +218,31 @@ install_system (TIUBundle *bundle, const gchar *device,
 	  goto cleanup;
 	}
 
-      gchar *usr_mkdir = g_strjoin("/", usr_snapshot, "usr", NULL);
-      if (g_mkdir(usr_mkdir, 0755) != 0)
-        {
-          g_set_error(error, G_FILE_ERROR, G_FILE_ERROR_FAILED,
-                      "Failed creating mount path '%s'", usr_mkdir);
-	  free (usr_mkdir);
-	  goto cleanup;
-        }
-
-      if (!bind_mount(usr_mkdir, "/mnt", "usr", &ierror))
+      /* Umount /mnt/usr to mount correct snapshot */
+      /* XXX save original used device? */
+      if (umount2 ("/mnt/usr", UMOUNT_NOFOLLOW))
 	{
-	  g_propagate_error(error, ierror);
-	  free (usr_mkdir);
+	  int err = errno;
+	  g_set_error(error, G_FILE_ERROR, g_file_error_from_errno(err),
+		      "failed to umount usr: %s", g_strerror(err));
 	  goto cleanup;
 	}
 
-      free (usr_mkdir);
+      /* XXX use the saved original device instead of hardcoded vda3 */
+      if (mount("/dev/vda3", "/mnt/usr", "btrfs", MS_REMOUNT, "subvol=/.snapshots/1/snapshot"))
+	{
+	  int err = errno;
+	  g_set_error(&ierror, G_FILE_ERROR, g_file_error_from_errno(err),
+		      "failed to re-mount /usr read-write: %s", g_strerror(err));
+	  goto cleanup;
+	}
+
+      /* XXXX */
+      if (!bind_mount(usr_mkdir, "/mnt", "usr", &ierror))
+	{
+	  g_propagate_error(error, ierror);
+	  goto cleanup;
+	}
     }
   else
     {
@@ -276,21 +284,6 @@ install_system (TIUBundle *bundle, const gchar *device,
 	  g_propagate_error(error, ierror);
 	  goto cleanup;
 	}
-
-      if (!btrfs_get_subvolume_id (usr_snapshot, "/mnt/os/.snapshots",
-				   &subvol_id, &ierror))
-	{
-	  g_propagate_error(error, ierror);
-	  goto cleanup;
-	}
-
-      if (!btrfs_set_default (subvol_id, usr_snapshot, &ierror))
-	{
-	  g_propagate_error(error, ierror);
-	  goto cleanup;
-	}
-
-      free (subvol_id);
     }
 
   if (!exec_script (LIBEXEC_TIU"/populate-etc", device,
