@@ -106,6 +106,46 @@ rec_umount(const gchar *mountpoint)
    g_clear_error(&ierror);
 }
 
+static gboolean
+call_swupdate(const gchar *archive, GError **error)
+{
+   g_autoptr (GSubprocess) sproc = NULL;
+   GError *ierror = NULL;
+
+   if (archive == NULL)
+     return FALSE;
+
+   if (verbose_flag)
+     g_printf("  * Call swupdate with %s...\n", archive);
+
+   GPtrArray *args = g_ptr_array_new_full(6, g_free);
+   g_ptr_array_add(args, "swupdate");
+   g_ptr_array_add(args, "-k");
+   g_ptr_array_add(args, "/usr/share/swupdate/certs/public.pem");
+   g_ptr_array_add(args, "-i");
+   g_ptr_array_add(args,  g_strdup(archive));
+   g_ptr_array_add(args, NULL);
+   sproc = g_subprocess_newv((const gchar * const *)args->pdata,
+			     G_SUBPROCESS_FLAGS_STDOUT_SILENCE, &ierror);
+
+
+  if (sproc == NULL)
+    {
+      g_propagate_prefixed_error(error, ierror, "Failed to start swupdate: ");
+      return FALSE;
+    }
+
+  if (!g_subprocess_wait_check(sproc, NULL, &ierror))
+    {
+      g_propagate_prefixed_error(error, ierror,
+                                 "Failed to execute swupdate: ");
+      return FALSE;
+    }
+
+  return TRUE;
+}
+
+
 /* This function is called after installation to cleanup leftovers.
    Goal should be that you can call the tiu installer as often as you wish. */
 static void
@@ -116,31 +156,6 @@ cleanup_install (void)
 
    if (verbose_flag)
      g_printf("Cleanup system:\n");
-
-   /* Remove snapper config for "usr" snapshots */
-   if (access ("/etc/snapper/configs/usr", F_OK) == 0)
-     {
-       if (verbose_flag)
-	 g_printf("  * Delete \"usr\" snapper configuration...\n");
-
-       g_unlink ("/etc/snapper/configs/usr");
-
-       GPtrArray *args = g_ptr_array_new_full(6, g_free);
-       g_ptr_array_add(args, "sed");
-       g_ptr_array_add(args, "-i");
-       g_ptr_array_add(args, "-e");
-       g_ptr_array_add(args, "s|SNAPPER_CONFIGS=.*|SNAPPER_CONFIGS=\"\"|g");
-       g_ptr_array_add(args, "/etc/sysconfig/snapper");
-       g_ptr_array_add(args, NULL);
-       sproc = g_subprocess_newv((const gchar * const *)args->pdata,
-				 G_SUBPROCESS_FLAGS_STDOUT_SILENCE, &ierror);
-       if (sproc != NULL)
-	 {
-	   g_subprocess_wait_check(sproc, NULL, &ierror);
-	 }
-       g_ptr_array_free(args, FALSE);
-       g_clear_error(&ierror);
-     }
 
    /* if /usr is mounted, umount that first, could shadow /usr/local */
    if (is_mounted ("/mnt/usr", &ierror))
@@ -190,14 +205,14 @@ install_system (const gchar *archive, const gchar *device,
       goto cleanup;
     }
 
-#if 0 /* XXX create /dev/update-image-usr symlink instead */
   /* we have at minimum two partitions A/B to switch between. Re-mount /usr read-write */
-  /* XXX replace hard coded device and filesystem values */
-  if (mount("/dev/vda3", "/mnt/usr", "xfs", MS_REMOUNT, NULL))
+  remove("/dev/update-image-usr");
+  /* XXX replace hard coded device, add error check */
+  if (symlink("/dev/vda3", "/dev/update-image-usr"))
     {
       int err = errno;
-      g_set_error(&ierror, G_FILE_ERROR, g_file_error_from_errno(err),
-		  "failed to re-mount /usr read-write: %s", g_strerror(err));
+      g_set_error(error, G_FILE_ERROR, g_file_error_from_errno(err),
+		  "failed to create symlink: %s", g_strerror(err));
       goto cleanup;
     }
 
@@ -209,9 +224,31 @@ install_system (const gchar *archive, const gchar *device,
 		  "failed to umount usr/local: %s", g_strerror(err));
       goto cleanup;
     }
-#endif
 
-  /* XXX use swupdate to deploy image */
+  /* umunt /mnt/usr, we cannot write to the partition if it is mounted */
+  if (umount2 ("/mnt/usr", UMOUNT_NOFOLLOW))
+    {
+      int err = errno;
+      g_set_error(error, G_FILE_ERROR, g_file_error_from_errno(err),
+		  "failed to umount usr: %s", g_strerror(err));
+      goto cleanup;
+    }
+
+  if (!call_swupdate(archive, &ierror))
+    {
+      g_propagate_error(error, ierror);
+      goto cleanup;
+    }
+
+  /* mount /usr so that we can setup the rest of the system */
+  /* XXX replace hard coded device and filesystem values */
+  if (mount("/dev/vda3", "/mnt/usr", "xfs", 0, NULL))
+    {
+      int err = errno;
+      g_set_error(&ierror, G_FILE_ERROR, g_file_error_from_errno(err),
+		  "failed to re-mount /usr read-write: %s", g_strerror(err));
+      goto cleanup;
+    }
 
   if (!exec_script (LIBEXEC_TIU"/populate-etc", device,
 		    &ierror, NULL, LOG"tiu-populate-etc.log"))
