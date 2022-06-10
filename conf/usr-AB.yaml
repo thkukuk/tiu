@@ -43,13 +43,13 @@ filesystems:
         - path: boot/grub2/x86_64-efi
         - path: usr/local
   ${DEVICE1_P3}:
-    filesystem: xfs
+    filesystem: ext4
     mountpoint: /usr
     mount_options: ['ro','x-initrd.mount']
   ${DEVICE1_P4}:
-    filesystem: xfs
+    filesystem: ext4
   ${DEVICE1_P5}:
-    filesystem: xfs
+    filesystem: ext4
   ${DEVICE1_P6}:
     filesystem: btrfs
     mountpoint: /var
