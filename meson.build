@@ -110,7 +110,6 @@ tools = files(
   'tools/setup-disk',
   'tools/setup-root',
   'tools/setup-bootloader',
-  'tools/setup-usr-snapper',
   'tools/populate-etc',
   'tools/update-kernel',
 )
