@@ -14,6 +14,8 @@
     License along with this library; If not, see <http://www.gnu.org/licenses/>.
 */
 
+#if 0 /* XXX */
+
 #include <errno.h>
 #include <fcntl.h>
 #include <mntent.h>
@@ -642,3 +644,5 @@ update_system (TIUBundle *bundle, const gchar *store, GError **error)
   else
     return update_system_usr_AB (bundle, store, error);
 }
+
+#endif

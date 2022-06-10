@@ -21,7 +21,7 @@ inc = include_directories('include')
 
 add_project_arguments(['-D_GNU_SOURCE=1',
 		       '-DXTSTRINGDEFINES',
-		       '-D_FORTIFY_SOURCE=2'], language : 'c')
+		       '-D_FORTIFY_SOURCE=3'], language : 'c')
 
 possible_cc_flags = [
 		  '-fstack-protector-strong',
@@ -45,24 +45,15 @@ add_project_arguments(cc.get_supported_arguments(possible_cc_flags), language : 
 
 libtiu_src = files(
   'lib/btrfs.c',
-  'lib/casync_extract.c',
-  'lib/casync_make.c',
-  'lib/check_archive.c',
-  'lib/create_images.c',
-  'lib/desync_tar.c',
-  'lib/desync_untar.c',
-  'lib/dm.c',
   'lib/extract_image.c',
   'lib/install.c',
   'lib/mount.c',
-  'lib/mount_archive.c',
   'lib/network.c',
   'lib/rm_rf.c',
   'lib/tiu_download.c',
   'lib/tiu_errors.c',
   'lib/update.c',
   'lib/variables.c',
-  'lib/verity_hash.c',
   'lib/workdir.c',
 )
 
@@ -73,11 +64,11 @@ tiu_src = files(
 mapfile = 'lib/libtiu.map'
 version_flag = '-Wl,--version-script,@0@/@1@'.format(meson.current_source_dir(), mapfile)
 
-openssl_dep = dependency('libcrypto')
 gio_dep = dependency('gio-2.0')
 gio_unix_dep = dependency('gio-unix-2.0')
 libeconf_dep = dependency('libeconf')
 libcurl_dep = dependency('libcurl')
+openssl_dep = dependency('libcrypto')
 
 lib = library(
   'tiu',
@@ -88,8 +79,7 @@ lib = library(
   link_depends : mapfile,
   version : meson.project_version(),
   soversion : '0',
-  dependencies : [gio_dep, gio_unix_dep, libeconf_dep, openssl_dep,
-		libcurl_dep, ],
+  dependencies : [gio_dep, gio_unix_dep, libeconf_dep, libcurl_dep, openssl_dep, ],
 )
 
 install_headers('include/tiu.h')
@@ -133,7 +123,6 @@ install_data(
 config = files(
   'conf/tiu.conf',
   'conf/usr-AB.yaml',
-  'conf/usr-btrfs.yaml',
 )
 
 install_data(

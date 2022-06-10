@@ -109,7 +109,7 @@ rec_umount(const gchar *mountpoint)
 /* This function is called after installation to cleanup leftovers.
    Goal should be that you can call the tiu installer as often as you wish. */
 static void
-cleanup_install (TIUBundle *bundle)
+cleanup_install (void)
 {
    g_autoptr (GSubprocess) sproc = NULL;
    GError *ierror = NULL;
@@ -146,27 +146,16 @@ cleanup_install (TIUBundle *bundle)
    if (is_mounted ("/mnt/usr", &ierror))
      rec_umount("/mnt/usr");
    rec_umount("/mnt");
-
-   if (bundle->mount_point != NULL)
-     {
-       if (verbose_flag)
-	 g_printf("  * unmount /var/lib/tiu/mount\n");
-
-       umount_tiu_archive (bundle, &ierror);
-     }
 }
 
 gboolean
-install_system (TIUBundle *bundle, const gchar *device,
-		TIUPartSchema schema,
-		const gchar *disk_layout,
-		const gchar *store,
-		GError **error)
+install_system (const gchar *archive, const gchar *device,
+		const gchar *disk_layout, GError **error)
 {
   GError *ierror = NULL;
   gboolean retval = FALSE;
 
-  if (bundle == NULL)
+  if (archive == NULL)
     {
       g_set_error_literal (error,
 			   T_ARCHIVE_ERROR,
@@ -201,61 +190,28 @@ install_system (TIUBundle *bundle, const gchar *device,
       goto cleanup;
     }
 
-  if (schema == TIU_USR_BTRFS)
+#if 0 /* XXX create /dev/update-image-usr symlink instead */
+  /* we have at minimum two partitions A/B to switch between. Re-mount /usr read-write */
+  /* XXX replace hard coded device and filesystem values */
+  if (mount("/dev/vda3", "/mnt/usr", "xfs", MS_REMOUNT, NULL))
     {
-      /* snapshots for /usr is only required if /usr is btrfs and the only /usr partition */
-      if (!exec_script (LIBEXEC_TIU"setup-usr-snapper", device,
-			&ierror, NULL, LOG"tiu-setup-usr-snapper.log"))
-	{
-	  g_propagate_error(error, ierror);
-	  goto cleanup;
-	}
-
-      if (!btrfs_set_readonly ("/mnt/usr", FALSE, &ierror))
-	{
-	  g_propagate_error(error, ierror);
-	  goto cleanup;
-	}
-    }
-  else
-    {
-      /* we have at minimum two partitions A/B to switch between. Re-mount /usr read-write */
-      /* XXX replace hard coded device and filesystem values */
-      if (mount("/dev/vda3", "/mnt/usr", "xfs", MS_REMOUNT, NULL))
-	{
-	  int err = errno;
-	  g_set_error(&ierror, G_FILE_ERROR, g_file_error_from_errno(err),
-		      "failed to re-mount /usr read-write: %s", g_strerror(err));
-	  goto cleanup;
-	}
-
-      /* Make sure usr/local is not mounted, else casync will fail on mount point */
-      if (umount2 ("/mnt/usr/local", UMOUNT_NOFOLLOW))
-	{
-	  int err = errno;
-	  g_set_error(error, G_FILE_ERROR, g_file_error_from_errno(err),
-		      "failed to umount usr/local: %s", g_strerror(err));
-	  goto cleanup;
-	}
-    }
-
-  if (!extract_image(bundle, "/mnt/usr", store, &ierror))
-    {
-      if (ierror)
-	g_propagate_error(error, ierror);
-      else
-	g_fprintf (stderr, "ERROR: installing the archive failed!\n");
+      int err = errno;
+      g_set_error(&ierror, G_FILE_ERROR, g_file_error_from_errno(err),
+		  "failed to re-mount /usr read-write: %s", g_strerror(err));
       goto cleanup;
     }
 
-  if (schema == TIU_USR_BTRFS)
+  /* Make sure usr/local is not mounted, else casync will fail on mount point */
+  if (umount2 ("/mnt/usr/local", UMOUNT_NOFOLLOW))
     {
-      if (!btrfs_set_readonly ("/mnt/usr", TRUE, &ierror))
-	{
-	  g_propagate_error(error, ierror);
-	  goto cleanup;
-	}
+      int err = errno;
+      g_set_error(error, G_FILE_ERROR, g_file_error_from_errno(err),
+		  "failed to umount usr/local: %s", g_strerror(err));
+      goto cleanup;
     }
+#endif
+
+  /* XXX use swupdate to deploy image */
 
   if (!exec_script (LIBEXEC_TIU"/populate-etc", device,
 		    &ierror, NULL, LOG"tiu-populate-etc.log"))
@@ -290,7 +246,7 @@ install_system (TIUBundle *bundle, const gchar *device,
   /* Umount /mnt/usr first, since it could hide /mnt/usr/local */
   umount2 ("/mnt/usr", UMOUNT_NOFOLLOW);
   umount_chroot(TIU_ROOT_DIR, TRUE, NULL);
-  cleanup_install (bundle);
+  cleanup_install ();
 
   return retval;
 }

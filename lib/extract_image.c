@@ -5,6 +5,8 @@
 #include "tiu.h"
 #include "tiu-internal.h"
 
+#if 0 /* XXX */
+
 gboolean
 extract_image(TIUBundle *bundle, const gchar *outputdir, const gchar *store,
 	      GError **error)
@@ -68,3 +70,4 @@ extract_image(TIUBundle *bundle, const gchar *outputdir, const gchar *store,
 
   return TRUE;
 }
+#endif

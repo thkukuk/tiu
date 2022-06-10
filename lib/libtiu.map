@@ -1,16 +1,11 @@
 LIBTIU_1.0 {
   global:
-    create_image;
     debug_flag;
-    download_tiu_archive;
+    download_archive;
     extract_image;
     install_system;
     update_system;
     verbose_flag;
-    check_tiu_archive;
-    umount_tiu_archive;
-    mount_tiu_archive;
-    free_bundle;
   local:
     *;
 };

@@ -22,32 +22,12 @@
 extern "C" {
 #endif
 
-typedef struct TIUBundle TIUBundle;
-
-typedef enum {
-  TIU_USR_BTRFS,
-  TIU_USR_AB
-} TIUPartSchema;
-
-extern gboolean extract_image(TIUBundle *bundle, const gchar *outputdir,
-			      const gchar *store, GError **error);
-extern gboolean create_image (const gchar *input, GError **error);
-extern gboolean install_system (TIUBundle *bundle, const gchar *device,
-                                TIUPartSchema schema,
-				const gchar *disk_layout,
-				const gchar *store,
-				GError **error);
-extern gboolean update_system (TIUBundle *bundle,
-			       const gchar *store,
-			       GError **error);
-extern gboolean download_tiu_archive (const gchar *tiuname,
-				      const gchar *archive_md5sum,
-				      TIUBundle **bundle,
-				      GError **error);
-extern gboolean check_md5sum(const gchar *filename, const gchar *md5sum);
-extern gboolean check_tiu_archive(TIUBundle *bundle, GError **error);
-extern gboolean umount_tiu_archive (TIUBundle *bundle, GError **error);
-extern gboolean mount_tiu_archive(TIUBundle *bundle, GError **error);
+extern gboolean extract_image(const gchar *archive, const gchar *outputdir, GError **error);
+extern gboolean install_system (const gchar *archive, const gchar *device,
+		                const gchar *disk_layout, GError **error);
+extern gboolean update_system (const gchar *archive, GError **error);
+extern gboolean download_archive (const gchar *archive, const gchar *archive_md5sum,
+				  gchar **location, GError **error);
 
 #ifdef __cplusplus
 }
