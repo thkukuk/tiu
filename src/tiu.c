@@ -289,7 +289,7 @@ main(int argc, char **argv)
         g_printf("Installing %s with disk layout described in %s\n",
 	         archive_file, disk_layout);
 
-      if (!install_system (archive_file, device, disk_layout, &error))
+      if (!install_system (location, device, disk_layout, &error))
 	{
 	  if (error)
 	    {
