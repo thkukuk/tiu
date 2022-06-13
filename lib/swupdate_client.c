@@ -33,6 +33,7 @@ static int fd = -1;
 static pthread_mutex_t mymutex;
 static pthread_cond_t cv_end = PTHREAD_COND_INITIALIZER;
 static gboolean retval = FALSE;
+static char buf[256];
 
 /*
  * this is the callback to get a new chunk of the
@@ -43,7 +44,6 @@ static gboolean retval = FALSE;
 static int
 readimage (char **p, int *size)
 {
-  char buf[1024];
   int ret;
 
   ret = read(fd, buf, sizeof(buf));
