@@ -24,6 +24,7 @@
 #include "tiu-internal.h"
 #include "tiu-btrfs.h"
 #include "tiu-mount.h"
+#include "tiu-swupdate.h"
 #include "tiu-errors.h"
 
 #define LIBEXEC_TIU "/usr/libexec/tiu/"
@@ -106,46 +107,6 @@ rec_umount(const gchar *mountpoint)
    g_clear_error(&ierror);
 }
 
-static gboolean
-call_swupdate(const gchar *archive, GError **error)
-{
-   g_autoptr (GSubprocess) sproc = NULL;
-   GError *ierror = NULL;
-
-   if (archive == NULL)
-     return FALSE;
-
-   if (verbose_flag)
-     g_printf("  * Call swupdate with %s...\n", archive);
-
-   GPtrArray *args = g_ptr_array_new_full(6, g_free);
-   g_ptr_array_add(args, "swupdate");
-   g_ptr_array_add(args, "-k");
-   g_ptr_array_add(args, "/usr/share/swupdate/certs/public.pem");
-   g_ptr_array_add(args, "-i");
-   g_ptr_array_add(args,  g_strdup(archive));
-   g_ptr_array_add(args, NULL);
-   sproc = g_subprocess_newv((const gchar * const *)args->pdata,
-			     G_SUBPROCESS_FLAGS_STDOUT_SILENCE, &ierror);
-
-
-  if (sproc == NULL)
-    {
-      g_propagate_prefixed_error(error, ierror, "Failed to start swupdate: ");
-      return FALSE;
-    }
-
-  if (!g_subprocess_wait_check(sproc, NULL, &ierror))
-    {
-      g_propagate_prefixed_error(error, ierror,
-                                 "Failed to execute swupdate: ");
-      return FALSE;
-    }
-
-  return TRUE;
-}
-
-
 /* This function is called after installation to cleanup leftovers.
    Goal should be that you can call the tiu installer as often as you wish. */
 static void
@@ -205,7 +166,8 @@ install_system (const gchar *archive, const gchar *device,
       goto cleanup;
     }
 
-  /* we have at minimum two partitions A/B to switch between. Re-mount /usr read-write */
+  /* we have at minimum two partitions A/B to switch between.
+     /dev/update-image-usr should be a symlink to the next free partition. */
   remove("/dev/update-image-usr");
   /* XXX replace hard coded device, add error check */
   if (symlink("/dev/vda3", "/dev/update-image-usr"))
@@ -234,7 +196,7 @@ install_system (const gchar *archive, const gchar *device,
       goto cleanup;
     }
 
-  if (!call_swupdate(archive, &ierror))
+  if (!swupdate_deploy(archive, &ierror))
     {
       g_propagate_error(error, ierror);
       goto cleanup;
@@ -242,10 +204,10 @@ install_system (const gchar *archive, const gchar *device,
 
   /* mount /usr so that we can setup the rest of the system */
   /* XXX replace hard coded device and filesystem values */
-  if (mount("/dev/vda3", "/mnt/usr", "xfs", 0, NULL))
+  if (mount("/dev/vda3", "/mnt/usr", "ext4", 0, NULL))
     {
       int err = errno;
-      g_set_error(&ierror, G_FILE_ERROR, g_file_error_from_errno(err),
+      g_set_error(error, G_FILE_ERROR, g_file_error_from_errno(err),
 		  "failed to re-mount /usr read-write: %s", g_strerror(err));
       goto cleanup;
     }

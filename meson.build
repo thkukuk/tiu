@@ -50,6 +50,7 @@ libtiu_src = files(
   'lib/mount.c',
   'lib/network.c',
   'lib/rm_rf.c',
+  'lib/swupdate_client.c',
   'lib/tiu_download.c',
   'lib/tiu_errors.c',
   'lib/update.c',
@@ -70,6 +71,8 @@ libeconf_dep = dependency('libeconf')
 libcurl_dep = dependency('libcurl')
 openssl_dep = dependency('libcrypto')
 
+swupdate_dep = declare_dependency(link_args : '-lswupdate',)
+
 lib = library(
   'tiu',
   libtiu_src,
@@ -79,7 +82,8 @@ lib = library(
   link_depends : mapfile,
   version : meson.project_version(),
   soversion : '0',
-  dependencies : [gio_dep, gio_unix_dep, libeconf_dep, libcurl_dep, openssl_dep, ],
+  dependencies : [gio_dep, gio_unix_dep, libeconf_dep, libcurl_dep, 
+                  openssl_dep, swupdate_dep, ],
 )
 
 install_headers('include/tiu.h')
