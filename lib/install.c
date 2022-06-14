@@ -107,6 +107,46 @@ rec_umount(const gchar *mountpoint)
    g_clear_error(&ierror);
 }
 
+#if 0 /* keep as backup */
+static gboolean
+call_swupdate(const gchar *archive, GError **error)
+{
+  g_autoptr (GSubprocess) sproc = NULL;
+  GError *ierror = NULL;
+  if (archive == NULL)
+    return FALSE;
+
+  if (verbose_flag)
+    g_printf("  * Call swupdate with %s...\n", archive);
+
+  GPtrArray *args = g_ptr_array_new_full(6, g_free);
+  g_ptr_array_add(args, "swupdate");
+  g_ptr_array_add(args, "-k");
+  g_ptr_array_add(args, "/usr/share/swupdate/certs/public.pem");
+  g_ptr_array_add(args, "-i");
+  g_ptr_array_add(args,  g_strdup(archive));
+  g_ptr_array_add(args, NULL);
+  sproc = g_subprocess_newv((const gchar * const *)args->pdata,
+                            G_SUBPROCESS_FLAGS_STDOUT_SILENCE, &ierror);
+
+
+  if (sproc == NULL)
+    {
+      g_propagate_prefixed_error(error, ierror, "Failed to start swupdate: ");
+      return FALSE;
+    }
+
+  if (!g_subprocess_wait_check(sproc, NULL, &ierror))
+    {
+      g_propagate_prefixed_error(error, ierror,
+                                 "Failed to execute swupdate: ");
+      return FALSE;
+    }
+
+  return TRUE;
+}
+#endif
+
 /* This function is called after installation to cleanup leftovers.
    Goal should be that you can call the tiu installer as often as you wish. */
 static void
@@ -196,7 +236,11 @@ install_system (const gchar *archive, const gchar *device,
       goto cleanup;
     }
 
-  if (!swupdate_deploy(archive, &ierror))
+#if 1
+  if (!swupdate_deploy (archive, &ierror))
+#else
+  if (!call_swupdate (archive, &ierror))
+#endif
     {
       g_propagate_error(error, ierror);
       goto cleanup;
