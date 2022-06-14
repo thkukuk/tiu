@@ -37,10 +37,11 @@ exec_script (const gchar *script, const gchar *device, GError **error,
   GError *ierror = NULL;
   GPtrArray *args = g_ptr_array_new_full(8, g_free);
 
+  if (verbose_flag)
+    g_printf("Running script '%s' for device '%s'...\n",
+	     script, device);
   if (debug_flag)
     {
-      g_printf("Running script '%s' for device '%s'...\n",
-	       script, device);
       if (disk_layout)
 	g_printf("Disk layout stored in: %s\n",	disk_layout);
       if (logfile)
@@ -147,6 +148,54 @@ call_swupdate(const gchar *archive, GError **error)
 }
 #endif
 
+static gboolean
+set_usr_device_name (const gchar *path, const gchar *device, GError **error)
+{
+  g_autoptr (GSubprocess) sproc = NULL;
+  GError *ierror = NULL;
+  GPtrArray *args = g_ptr_array_new_full(8, NULL);
+  gboolean retval = TRUE;
+
+  gchar *fstab = g_strjoin("/", path, "etc/fstab", NULL);
+
+  if (debug_flag)
+    g_printf("Adjusting '%s'...\n", fstab);
+
+  gchar *sedarg = g_strjoin(NULL, "s|.*[[:space:]]/usr[[:space:]].*|",
+                            device, "  /usr  ext4 ro,x-initrd.mount  0  0|g", NULL);
+
+  g_ptr_array_add(args, "sed");
+  g_ptr_array_add(args, "-i");
+  g_ptr_array_add(args, "-e");
+  g_ptr_array_add(args, sedarg);
+  g_ptr_array_add(args, fstab);
+  g_ptr_array_add(args, NULL);
+
+  sproc = g_subprocess_newv((const gchar * const *)args->pdata,
+                            G_SUBPROCESS_FLAGS_STDOUT_PIPE, &ierror);
+  if (sproc == NULL)
+    {
+      g_propagate_prefixed_error(error, ierror, "Failed to start sed on /etc/fstab: ");
+      retval = FALSE;
+      goto cleanup;
+    }
+
+  if (!g_subprocess_wait_check(sproc, NULL, &ierror))
+    {
+      g_propagate_prefixed_error(error, ierror,
+                                 "Failed to execute sed on /etc/fstab: ");
+      retval = FALSE;
+      goto cleanup;
+    }
+
+ cleanup:
+  g_ptr_array_free (args, TRUE);
+  g_free (sedarg);
+  g_free (fstab);
+
+  return retval;
+}
+
 /* This function is called after installation to cleanup leftovers.
    Goal should be that you can call the tiu installer as often as you wish. */
 static void
@@ -194,6 +243,15 @@ install_system (const gchar *archive, const gchar *device,
 
   if (!exec_script (LIBEXEC_TIU"setup-disk", device, &ierror,
 		    disk_layout, LOG"tiu-setup-disk.log"))
+    {
+      g_propagate_error(error, ierror);
+      goto cleanup;
+    }
+
+  /* XXX we need a way to identify the real /dev/... device name! */
+  /* XXX better would we if we could create /etc/fstab directly with
+     device names... */
+  if (!set_usr_device_name ("/mnt", "/dev/vda3", &ierror))
     {
       g_propagate_error(error, ierror);
       goto cleanup;
