@@ -446,6 +446,7 @@ def _extend_mount_options(mount_point, mount_options):
     for mount_option in mount_options:
         current_mount_options.append(mount_option)
     mount_point.set_mount_options(current_mount_options)
+    mount_point.set_mount_by(storage.MountByType_DEVICE) # XXX right place? and make this configureable
 
 
 def _filesystem(partition, filesystem):
