@@ -191,8 +191,9 @@ call_swupdate(const gchar *archive, GError **error)
 }
 #endif
 
+/* XXX not needed if we use mount.usr= and boot entries for every usr partition */
 static gboolean
-set_usr_device_name (const gchar *path, const gchar *device, GError **error)
+set_usr_device_name (const gchar *path, const gchar *partlabel, GError **error)
 {
   g_autoptr (GSubprocess) sproc = NULL;
   GError *ierror = NULL;
@@ -297,10 +298,7 @@ install_system (const gchar *archive, const gchar *device,
       goto cleanup;
     }
 
-  /* XXX we need a way to identify the real /dev/... device name! */
-  /* XXX better would we if we could create /etc/fstab directly with
-     device names... */
-  if (!set_usr_device_name ("/mnt", "/dev/vda3", &ierror))
+  if (!set_usr_device_name ("/mnt", "USR_A", &ierror))
     {
       g_propagate_error(error, ierror);
       goto cleanup;
@@ -316,8 +314,8 @@ install_system (const gchar *archive, const gchar *device,
   /* we have at minimum two partitions A/B to switch between.
      /dev/update-image-usr should be a symlink to the next free partition. */
   remove("/dev/update-image-usr");
-  /* XXX replace hard coded device, add error check */
-  if (symlink("/dev/vda3", "/dev/update-image-usr"))
+  /* Installation is always done on first /usr partition (A) */
+  if (symlink("/dev/disk/by-partlabel/USR_A", "/dev/update-image-usr"))
     {
       int err = errno;
       g_set_error(error, G_FILE_ERROR, g_file_error_from_errno(err),
@@ -354,8 +352,8 @@ install_system (const gchar *archive, const gchar *device,
     }
 
   /* mount /usr so that we can setup the rest of the system */
-  /* XXX replace hard coded device and filesystem values */
-  if (mount("/dev/vda3", "/mnt/usr", "ext4", 0, NULL))
+  /* XXX replace hard coded filesystem value */
+  if (mount("/dev/disk/by-partlabel/USR_A", "/mnt/usr", "ext4", 0, NULL))
     {
       int err = errno;
       g_set_error(error, G_FILE_ERROR, g_file_error_from_errno(err),
