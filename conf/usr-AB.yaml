@@ -12,18 +12,23 @@ partitions:
         - number: 2
           size: 1GiB
           type: linux
+          label: ROOT
         - number: 3
           size: 2GiB
           type: linux
+          label: USR_A
         - number: 4
           size: 2GiB
           type: linux
+          label: USR_B
         - number: 5
           size: 2GiB
           type: linux
+          label: RECOVERY
         - number: 6
           size: rest
           type: linux
+          label: VAR
 filesystems:
   ${DEVICE1_P1}:
     filesystem: vfat

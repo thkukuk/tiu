@@ -205,7 +205,7 @@ set_usr_device_name (const gchar *path, const gchar *partlabel, GError **error)
   if (debug_flag)
     g_printf("Adjusting '%s'...\n", fstab);
 
-  gchar *sedarg = g_strjoin(NULL, "s|.*[[:space:]]/usr[[:space:]].*|",
+  gchar *sedarg = g_strjoin(NULL, "s|.*[[:space:]]/usr[[:space:]].*|PARTLABEL=",
                             partlabel, "  /usr  ext4 ro,x-initrd.mount  0  0|g", NULL);
 
   g_ptr_array_add(args, "sed");
@@ -293,14 +293,6 @@ install_system (const gchar *archive, const gchar *device,
 
   if (!exec_script (LIBEXEC_TIU"setup-disk", device, &ierror,
 		    disk_layout, LOG"setup-disk.log"))
-    {
-      g_propagate_error(error, ierror);
-      goto cleanup;
-    }
-
-  /* XXX big fat hack until we enhanced setup-disk to support disklabel! */
-  if (!exec_script (LIBEXEC_TIU"setup-partlabel", device, &ierror,
-		    disk_layout, LOG"setup-partlabel.log"))
     {
       g_propagate_error(error, ierror);
       goto cleanup;

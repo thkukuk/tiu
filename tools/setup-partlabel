@@ -1,7 +1,0 @@
-#!/bin/sh
-
-parted /dev/vda -s -- name 2 ROOT
-parted /dev/vda -s -- name 3 USR_A
-parted /dev/vda -s -- name 4 USR_B
-parted /dev/vda -s -- name 5 RECOVERY
-parted /dev/vda -s -- name 6 VAR
