@@ -81,6 +81,49 @@ exec_script (const gchar *script, const gchar *device, GError **error,
   return TRUE;
 }
 
+static gboolean
+wipefs (const gchar *device,  const gchar *logfile __attribute__((unused)), GError **error)
+{
+  g_autoptr (GSubprocess) sproc = NULL;
+  GError *ierror = NULL;
+  GPtrArray *args = g_ptr_array_new_full(8, g_free);
+
+  if (verbose_flag)
+    g_printf("Running wipefs on device '%s'...\n", device);
+
+  /* XXX implement writing into logfile */
+  if (debug_flag)
+    {
+      if (logfile)
+	g_printf("Output will be written to: %s\n", logfile);
+    }
+
+  /* XXX strdup all or nothing... */
+  g_ptr_array_add(args, "wipefs");
+  g_ptr_array_add(args, "-f");
+  g_ptr_array_add(args, "-a");
+  g_ptr_array_add(args, g_strdup(device));
+  g_ptr_array_add(args, NULL);
+
+  sproc = g_subprocess_newv((const gchar * const *)args->pdata,
+                            G_SUBPROCESS_FLAGS_STDOUT_SILENCE, &ierror);
+  if (sproc == NULL)
+    {
+      g_propagate_prefixed_error(error, ierror, "Failed to start sub-process (wipefs): ");
+      return FALSE;
+    }
+
+  if (!g_subprocess_wait_check(sproc, NULL, &ierror))
+    {
+      g_propagate_prefixed_error(error, ierror,
+                                 "Failed to execute sub-process (wipefs): ");
+      return FALSE;
+    }
+
+  return TRUE;
+}
+
+
 /* XXX make this available in mount.c as rec_umount and merge with
    umount_chroot() */
 static void
@@ -241,8 +284,14 @@ install_system (const gchar *archive, const gchar *device,
       return FALSE;
     }
 
+  if (!wipefs (device, LOG"wipefs.log", &ierror))
+    {
+      g_propagate_error(error, ierror);
+      goto cleanup;
+    }
+
   if (!exec_script (LIBEXEC_TIU"setup-disk", device, &ierror,
-		    disk_layout, LOG"tiu-setup-disk.log"))
+		    disk_layout, LOG"setup-disk.log"))
     {
       g_propagate_error(error, ierror);
       goto cleanup;
@@ -258,7 +307,7 @@ install_system (const gchar *archive, const gchar *device,
     }
 
   if (!exec_script (LIBEXEC_TIU"setup-root", device,
-		    &ierror, NULL, LOG"tiu-setup-root.log"))
+		    &ierror, NULL, LOG"setup-root.log"))
     {
       g_propagate_error(error, ierror);
       goto cleanup;
@@ -315,7 +364,7 @@ install_system (const gchar *archive, const gchar *device,
     }
 
   if (!exec_script (LIBEXEC_TIU"/populate-etc", device,
-		    &ierror, NULL, LOG"tiu-populate-etc.log"))
+		    &ierror, NULL, LOG"populate-etc.log"))
     {
       g_propagate_error(error, ierror);
       goto cleanup;
@@ -328,14 +377,14 @@ install_system (const gchar *archive, const gchar *device,
     }
 
   if (!exec_script (LIBEXEC_TIU"setup-bootloader", device,
-		    &ierror, NULL, LOG"tiu-setup-bootloader.log"))
+		    &ierror, NULL, LOG"setup-bootloader.log"))
     {
       g_propagate_error(error, ierror);
       goto cleanup;
     }
 
   if (!exec_script (LIBEXEC_TIU"finish", device,
-		    &ierror, NULL, LOG"tiu-finish.log"))
+		    &ierror, NULL, LOG"finish.log"))
     {
       g_propagate_error(error, ierror);
       goto cleanup;
