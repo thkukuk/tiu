@@ -124,6 +124,12 @@ correctly with the rest of the system.
       * "lvm": Partition used to build an LVM physical volume.
       * "raid": Partition that will be a component of an array.
 
+    * "label": String. Optional.
+
+      Partition name for GPT entry. This partition can be referenced
+      later with PARTLABEL in "fstab" or via the kernel command line
+      (dracut "root" parameter).
+
 Example:
 
 ---
@@ -139,9 +145,11 @@ partitions:
         - number: 2
           size: 8GiB
           type: linux
+          label: Root
         - number: 3
           size: rest
           type: linux
+          label: Usr
 
 
 "filesystems" section
@@ -158,6 +166,11 @@ applied to it.
   "ext{2,3,4}", "btrfs", "vfat", "xfs", "jfs", "ntfs", "swap", "nfs",
   "tmpfs", "iso9660", "udf", "f2fs" "exfat" or "bitlocker".
 
+* "label". String. Optional.
+
+  File system label.  Can be used to mount the device by this
+  criteria.
+
 * "mountpoint". String.
 
   Mount point where the device will be registered in "fstab".
@@ -165,6 +178,12 @@ applied to it.
 * "mount_options". Array. Optional.
 
   Array of mount options for the partition.
+
+* "mount_by". String. Optional. Default: "uuid"
+
+  Select how to reference the device during the "fstab"
+  creation. Current supported values are "device", "uuid", "label",
+  "id" or "path" (not all options are implemented in libstorage-ng).
 
 * "subvolumes". Dictionary.
 
@@ -200,6 +219,7 @@ filesystems:
   /dev/sda2:
     filesystem: btrfs
     mountpoint: /
+    mount_by: device
     subvolumes:
       prefix: '@'
       subvolume:
@@ -218,7 +238,6 @@ filesystems:
 
 """
 
-
 import argparse
 import re
 import string
@@ -226,7 +245,6 @@ import sys
 
 import storage
 import yaml
-
 
 DEFAULT_LAYOUT = """
 ---
@@ -277,19 +295,33 @@ filesystems:
     mount_options: ['nodatacow', 'x-initrd.mount']
 """
 
+
 def _log_storage_milestone(message):
-    storage.get_logger().write(storage.LogLevel_MILESTONE,
-                               "tiu", __file__, sys._getframe(1).f_lineno,
-                               "", message)
+    storage.get_logger().write(
+        storage.LogLevel_MILESTONE,
+        "tiu",
+        __file__,
+        sys._getframe(1).f_lineno,
+        "",
+        message,
+    )
+
 
 def _log_storage_error(error_msg):
-    storage.get_logger().write(storage.LogLevel_ERROR,
-                               "tiu", __file__, sys._getframe(1).f_lineno,
-                               "", error_msg)
+    storage.get_logger().write(
+        storage.LogLevel_ERROR,
+        "tiu",
+        __file__,
+        sys._getframe(1).f_lineno,
+        "",
+        error_msg,
+    )
+
 
 def _raise_exception(error_msg):
     _log_storage_error(error_msg)
     raise Exception(error_msg)
+
 
 class MyCommitCallbacks(storage.CommitCallbacks):
     def message(self, message):
@@ -300,6 +332,7 @@ class MyCommitCallbacks(storage.CommitCallbacks):
         _log_storage_error(f"'{message}' '{what}'")
         print(f"error '{message}' '{what}'")
         return False
+
 
 def _resolve_devices(devices, layout):
     """Resolve device and partition names in a template."""
@@ -437,6 +470,10 @@ def _partition(disk, label, partitions):
         for id_ in ids[type_]:
             part.set_id(id_)
 
+        label = partition.get("label")
+        if label:
+            part.set_label(label)
+
 
 def _extend_mount_options(mount_point, mount_options):
     """Extend the mount options of a mount point."""
@@ -446,7 +483,6 @@ def _extend_mount_options(mount_point, mount_options):
     for mount_option in mount_options:
         current_mount_options.append(mount_option)
     mount_point.set_mount_options(current_mount_options)
-    mount_point.set_mount_by(storage.MountByType_DEVICE) # XXX right place? and make this configureable
 
 
 def _filesystem(partition, filesystem):
@@ -478,6 +514,14 @@ def _filesystem(partition, filesystem):
         # "vboxsf": (storage.FsType_VBOXSF, storage.to_vboxsf),
     }
 
+    mount_by = {
+        "device": storage.MountByType_DEVICE,
+        "uuid": storage.MountByType_UUID,
+        "label": storage.MountByType_LABEL,
+        "id": storage.MountByType_ID,
+        "path": storage.MountByType_PATH,
+    }
+
     fs = filesystem.get("filesystem", "btrfs")
     if fs not in filesystems:
         _raise_exception(f"Filesystem {fs} not recognized")
@@ -485,9 +529,15 @@ def _filesystem(partition, filesystem):
     fs_type, convert = filesystems[fs]
     fs_ = convert(partition.create_filesystem(fs_type))
 
+    if "label" in filesystem:
+        fs_.set_label(filesystem["label"])
+
     if "mountpoint" in filesystem:
         mount_point = fs_.create_mount_point(filesystem["mountpoint"])
         _extend_mount_options(mount_point, filesystem.get("mount_options", []))
+
+        if "mount_by" in filesystem and filesystem["mount_by"] in mount_by:
+            mount_point.set_mount_by(mount_by[filesystem["mount_by"]])
 
     if fs == "btrfs" and "subvolumes" in filesystem:
         subvolumes = filesystem["subvolumes"]
