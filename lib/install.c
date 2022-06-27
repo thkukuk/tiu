@@ -206,7 +206,7 @@ set_usr_device_name (const gchar *path, const gchar *partlabel, GError **error)
     g_printf("Adjusting '%s'...\n", fstab);
 
   gchar *sedarg = g_strjoin(NULL, "s|.*[[:space:]]/usr[[:space:]].*|",
-                            device, "  /usr  ext4 ro,x-initrd.mount  0  0|g", NULL);
+                            partlabel, "  /usr  ext4 ro,x-initrd.mount  0  0|g", NULL);
 
   g_ptr_array_add(args, "sed");
   g_ptr_array_add(args, "-i");
