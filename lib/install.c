@@ -298,6 +298,14 @@ install_system (const gchar *archive, const gchar *device,
       goto cleanup;
     }
 
+  /* XXX big fat hack until we enhanced setup-disk to support disklabel! */
+  if (!exec_script (LIBEXEC_TIU"setup-partlabel", device, &ierror,
+		    disk_layout, LOG"setup-partlabel.log"))
+    {
+      g_propagate_error(error, ierror);
+      goto cleanup;
+    }
+
   if (!set_usr_device_name ("/mnt", "USR_A", &ierror))
     {
       g_propagate_error(error, ierror);
