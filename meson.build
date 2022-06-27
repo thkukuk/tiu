@@ -114,7 +114,6 @@ tools = files(
   'tools/setup-bootloader',
   'tools/setup-disk',
   'tools/setup-root',
-  'tools/setup-partlabel',
   'tools/populate-etc',
   'tools/update-kernel',
 )
