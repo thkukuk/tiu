@@ -216,6 +216,10 @@ install_system (const gchar *archive, const gchar *device,
       goto cleanup;
     }
 
+  /* Remove /usr/local to avoid warning about shadowing files when
+     mounting /usr. */
+  g_rmdir("/mnt/usr/local");
+
   /* we have at minimum two partitions A/B to switch between.
      /dev/update-image-usr should be a symlink to the next free partition. */
   remove("/dev/update-image-usr");
