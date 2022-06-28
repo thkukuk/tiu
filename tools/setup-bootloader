@@ -26,24 +26,29 @@ if [ -z "$device" ]; then
     exit 2
 fi
 
+# we need /etc/os-release already now
+run "ln -sf ../usr/lib/os-release ${ROOTDIR}/etc/os-release"
+
 # We need some files outside /usr
 # /etc/grub.d contains scripts which belongs to /usr/libexec
-run "ln -sf ../usr/share/factory/etc/grub.d ${ROOTDIR}/etc/"
+run "cp -av ${ROOTDIR}/usr/share/factory/etc/grub.d ${ROOTDIR}/etc/"
+# We need our own 10_linux
+run "cp -av ${ROOTDIR}/usr/share/tiu/10_linux ${ROOTDIR}/etc/grub.d/"
 # Create input variables for grub.cfg
 run "mkdir -p ${ROOTDIR}/etc/default"
 run "cp -av ${ROOTDIR}/usr/share/factory/etc/default/grub ${ROOTDIR}/etc/default/grub"
+run "echo GRUB_DISABLE_SUBMENU=true >> ${ROOTDIR}/etc/default/grub"
 
 # Install the kernel
+mkdir /boot/A
 for i in "${ROOTDIR}"/usr/lib/modules/* ; do
     KVER=$(basename "$i")
     for f in .vmlinuz.hmac System.map sysctl.conf vmlinuz; do
-        run "cp -a \"${ROOTDIR}/usr/lib/modules/$KVER/$f\" \"${ROOTDIR}/boot/$f-$KVER\""
+        run "cp -a \"${ROOTDIR}/usr/lib/modules/$KVER/$f\" \"${ROOTDIR}/boot/A/$f-$KVER\""
     done
-    run "chroot ${ROOTDIR} dracut --kver \"$KVER\""
+    run "chroot ${ROOTDIR} dracut --kernel-image \"/boot/A/$f-$KVER\" \"/boot/A/initrd-$KVER\""
 done
 
-# we need /etc/os-release already now
-run "ln -sf ../usr/lib/os-release ${ROOTDIR}/etc/os-release"
 run "sed -i -e 's|GRUB_CMDLINE_LINUX_DEFAULT=.*|GRUB_CMDLINE_LINUX_DEFAULT=\"rw quiet systemd.show_status=1 mitigations=auto \\\\\$ignition_firstboot\"|g' ${ROOTDIR}/etc/default/grub"
 run "echo -e 'SUSE_BTRFS_SNAPSHOT_BOOTING=\"true\"\nGRUB_DISABLE_OS_PROBER=\"true\"' >> ${ROOTDIR}/etc/default/grub"
 if [ -d /sys/firmware/efi ]; then
