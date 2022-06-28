@@ -417,7 +417,7 @@ while [ "x$list" != "x" ] ; do
 
   if [ "x${PART_AB}" = "xtrue" ]; then
       linux_entry "${OS}" "${version}" partAB \
-		  "${GRUB_CMDLINE_LINUX} mount.usr=PARTLABEL=USR_${part_ab} ${GRUB_CMDLINE_LINUX_DEFAULT}" "${part_ab}"
+		  "${GRUB_CMDLINE_LINUX} mount.usr=PARTLABEL=USR_${part_ab} mount.usrflags=ro ${GRUB_CMDLINE_LINUX_DEFAULT}" "${part_ab}"
   else
       linux_entry "${OS}" "${version}" advanced \
 		  "${GRUB_CMDLINE_LINUX} ${GRUB_CMDLINE_LINUX_DEFAULT}"
