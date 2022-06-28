@@ -148,55 +148,6 @@ call_swupdate(const gchar *archive, GError **error)
 }
 #endif
 
-/* XXX not needed if we use mount.usr= and boot entries for every usr partition */
-static gboolean
-set_usr_device_name (const gchar *path, const gchar *partlabel, GError **error)
-{
-  g_autoptr (GSubprocess) sproc = NULL;
-  GError *ierror = NULL;
-  GPtrArray *args = g_ptr_array_new_full(8, NULL);
-  gboolean retval = TRUE;
-
-  gchar *fstab = g_strjoin("/", path, "etc/fstab", NULL);
-
-  if (debug_flag)
-    g_printf("Adjusting '%s'...\n", fstab);
-
-  gchar *sedarg = g_strjoin(NULL, "s|.*[[:space:]]/usr[[:space:]].*|PARTLABEL=",
-                            partlabel, "  /usr  ext4 ro,x-initrd.mount  0  0|g", NULL);
-
-  g_ptr_array_add(args, "sed");
-  g_ptr_array_add(args, "-i");
-  g_ptr_array_add(args, "-e");
-  g_ptr_array_add(args, sedarg);
-  g_ptr_array_add(args, fstab);
-  g_ptr_array_add(args, NULL);
-
-  sproc = g_subprocess_newv((const gchar * const *)args->pdata,
-                            G_SUBPROCESS_FLAGS_STDOUT_PIPE, &ierror);
-  if (sproc == NULL)
-    {
-      g_propagate_prefixed_error(error, ierror, "Failed to start sed on /etc/fstab: ");
-      retval = FALSE;
-      goto cleanup;
-    }
-
-  if (!g_subprocess_wait_check(sproc, NULL, &ierror))
-    {
-      g_propagate_prefixed_error(error, ierror,
-                                 "Failed to execute sed on /etc/fstab: ");
-      retval = FALSE;
-      goto cleanup;
-    }
-
- cleanup:
-  g_ptr_array_free (args, TRUE);
-  g_free (sedarg);
-  g_free (fstab);
-
-  return retval;
-}
-
 /* This function is called after installation to cleanup leftovers.
    Goal should be that you can call the tiu installer as often as you wish. */
 static void
@@ -249,16 +200,19 @@ install_system (const gchar *archive, const gchar *device,
       goto cleanup;
     }
 
-  if (!set_usr_device_name ("/mnt", "USR_A", &ierror))
+  if (!exec_script (LIBEXEC_TIU"setup-root", device,
+		    &ierror, NULL, LOG"setup-root.log"))
     {
       g_propagate_error(error, ierror);
       goto cleanup;
     }
 
-  if (!exec_script (LIBEXEC_TIU"setup-root", device,
-		    &ierror, NULL, LOG"setup-root.log"))
+  /* Make sure usr/local is not mounted */
+  if (umount2 ("/mnt/usr/local", UMOUNT_NOFOLLOW))
     {
-      g_propagate_error(error, ierror);
+      int err = errno;
+      g_set_error(error, G_FILE_ERROR, g_file_error_from_errno(err),
+		  "failed to umount usr/local: %s", g_strerror(err));
       goto cleanup;
     }
 
@@ -274,24 +228,6 @@ install_system (const gchar *archive, const gchar *device,
       goto cleanup;
     }
 
-  /* Make sure usr/local is not mounted, else casync will fail on mount point */
-  if (umount2 ("/mnt/usr/local", UMOUNT_NOFOLLOW))
-    {
-      int err = errno;
-      g_set_error(error, G_FILE_ERROR, g_file_error_from_errno(err),
-		  "failed to umount usr/local: %s", g_strerror(err));
-      goto cleanup;
-    }
-
-  /* umunt /mnt/usr, we cannot write to the partition if it is mounted */
-  if (umount2 ("/mnt/usr", UMOUNT_NOFOLLOW))
-    {
-      int err = errno;
-      g_set_error(error, G_FILE_ERROR, g_file_error_from_errno(err),
-		  "failed to umount usr: %s", g_strerror(err));
-      goto cleanup;
-    }
-
 #if 1
   if (!swupdate_deploy (archive, &ierror))
 #else
@@ -301,6 +237,9 @@ install_system (const gchar *archive, const gchar *device,
       g_propagate_error(error, ierror);
       goto cleanup;
     }
+
+  /* Symlink for swupdate no longer needed */
+  remove("/dev/update-image-usr");
 
   /* mount /usr so that we can setup the rest of the system */
   /* XXX replace hard coded filesystem value */

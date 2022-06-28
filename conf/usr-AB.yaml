@@ -49,8 +49,6 @@ filesystems:
         - path: usr/local
   ${DEVICE1_P3}:
     filesystem: ext4
-    mountpoint: /usr
-    mount_options: ['ro','x-initrd.mount']
   ${DEVICE1_P4}:
     filesystem: ext4
   ${DEVICE1_P5}:
