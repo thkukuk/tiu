@@ -40,7 +40,7 @@ run "cp -av ${ROOTDIR}/usr/share/factory/etc/default/grub ${ROOTDIR}/etc/default
 run "echo GRUB_DISABLE_SUBMENU=true >> ${ROOTDIR}/etc/default/grub"
 
 # Install the kernel
-mkdir /boot/A
+run "mkdir -p ${ROOTDIR}/boot/A"
 for i in "${ROOTDIR}"/usr/lib/modules/* ; do
     KVER=$(basename "$i")
     for f in .vmlinuz.hmac System.map sysctl.conf vmlinuz; do
