@@ -126,6 +126,7 @@ install_data(
 config = files(
   'conf/tiu.conf',
   'conf/usr-AB.yaml',
+  'conf/10_linux',
 )
 
 install_data(
