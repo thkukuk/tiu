@@ -123,8 +123,13 @@ swupdate_deploy (const char* archive, GError **error)
   if (fd >= 0)
     close(fd);
 
-  /* XXX this needs to have a correct g_set_error call in case
-     of failure! */
+  if (retval != TRUE)
+    {
+      /* Find a way to get the real error... */
+      g_set_error(error, G_FILE_ERROR, G_FILE_ERROR_FAILED,
+                  "Updating /usr with swupdate failed!");
+    }
+
   if (verbose_flag)
     g_printf("Updating /usr with swupdate %s\n",
 	     retval == FALSE ? "failed!" : "was successful!");
