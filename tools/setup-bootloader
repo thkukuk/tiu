@@ -33,7 +33,7 @@ run "ln -sf ../usr/lib/os-release ${ROOTDIR}/etc/os-release"
 # /etc/grub.d contains scripts which belongs to /usr/libexec
 run "cp -av ${ROOTDIR}/usr/share/factory/etc/grub.d ${ROOTDIR}/etc/"
 # We need our 09_partAB
-run "cp -av ${ROOTDIR}/usr/share/tiu/09_linux ${ROOTDIR}/etc/grub.d/"
+run "cp -av ${ROOTDIR}/usr/share/tiu/09_partAB ${ROOTDIR}/etc/grub.d/"
 # Create input variables for grub.cfg
 run "mkdir -p ${ROOTDIR}/etc/default"
 run "cp -av ${ROOTDIR}/usr/share/factory/etc/default/grub ${ROOTDIR}/etc/default/grub"
