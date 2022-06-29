@@ -17,19 +17,19 @@ partitions:
           size: 1GiB
           type: linux
           label: ROOT
-        - number: 3
+        - number: 4 
           size: 1GiB
           type: linux
           label: USR_A
-        - number: 4
-          size: 1GiB
-          type: linux
-          label: USR_B
         - number: 5
           size: 1GiB
           type: linux
-          label: USR_C
+          label: USR_B
         - number: 6
+          size: 1GiB
+          type: linux
+          label: USR_C
+        - number: 7
           size: rest
           type: linux
           label: VAR
@@ -58,7 +58,7 @@ filesystems:
     filesystem: ext4
   ${DEVICE1_P6}:
     filesystem: ext4
-  ${DEVICE1_P8}:
+  ${DEVICE1_P7}:
     filesystem: btrfs
     mountpoint: /var
     mount_options: ['nodatacow', 'x-initrd.mount']
