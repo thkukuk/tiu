@@ -1,0 +1,18 @@
+#! /bin/sh
+set -e
+## XXX needs patch in grub2-mkconfig: if [ "x${SUSE_PARTITION_AB}" = "xtrue" ]; then
+if [ -d /boot/A ]; then
+
+    list="/dev/disk/by-partlabel/USR_?"
+
+    for i in $list; do
+
+	PART=$(echo $i | sed -e 's|/dev/disk/by-partlabel/USR_||g')
+
+	cat <<EOF
+if [ -f "/${PART}/grub-entry.cfg" ]; then
+  source "/${PART}/grub-entry.cfg"
+fi
+EOF
+    done
+fi
