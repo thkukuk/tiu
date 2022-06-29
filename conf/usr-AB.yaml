@@ -14,7 +14,7 @@ partitions:
           type: linux
           label: BOOT
         - number: 3
-          size: 1GB
+          size: 1GiB
           type: linux
           label: ROOT
         - number: 3
