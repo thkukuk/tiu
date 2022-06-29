@@ -14,8 +14,6 @@
     License along with this library; If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if 0 /* XXX */
-
 #include <errno.h>
 #include <fcntl.h>
 #include <mntent.h>
@@ -27,7 +25,11 @@
 
 #include "tiu.h"
 #include "tiu-internal.h"
+#include "tiu-swupdate.h"
 #include "tiu-mount.h"
+
+#if 0 /* XXX */
+
 #include "tiu-btrfs.h"
 
 static gboolean
@@ -176,8 +178,10 @@ mount_boot_efi (gchar *target, GError **error)
   return TRUE;
 }
 
+#endif
+
 static gboolean
-update_kernel (gchar *chroot, GError **error)
+update_kernel (gchar *chroot, gchar *partition, GError **error)
 {
   g_autoptr (GSubprocess) sproc = NULL;
   GError *ierror = NULL;
@@ -185,7 +189,7 @@ update_kernel (gchar *chroot, GError **error)
   gboolean retval = TRUE;
 
   if (debug_flag)
-    g_printf("Updating kernel in %s/boot...\n", chroot?chroot:"");
+    g_printf("Updating kernel in %s/boot/%s...\n", chroot?chroot:"", partition);
 
 
   if (chroot)
@@ -194,6 +198,7 @@ update_kernel (gchar *chroot, GError **error)
       g_ptr_array_add(args, chroot);
     }
   g_ptr_array_add(args, "/usr/libexec/tiu/update-kernel");
+  g_ptr_array_add(args, partition);
   g_ptr_array_add(args, NULL);
 
   sproc = g_subprocess_newv((const gchar * const *)args->pdata,
@@ -219,6 +224,7 @@ update_kernel (gchar *chroot, GError **error)
   return retval;
 }
 
+#if 0
 static gboolean
 update_bootloader (gchar *chroot, GError **error)
 {
@@ -228,7 +234,7 @@ update_bootloader (gchar *chroot, GError **error)
   gboolean retval = TRUE;
 
   if (debug_flag)
-    g_printf("Updating bootloader in %s...\n", chroot?chroot:"");
+    g_printf("Updating bootloader in %s...\n", chroot?chroot:"/");
 
   if (chroot)
     {
@@ -261,177 +267,73 @@ update_bootloader (gchar *chroot, GError **error)
 
   return retval;
 }
+#endif
 
-static gboolean
-update_system_usr_btrfs (TIUBundle *bundle, const gchar *store, GError **error)
+/* XXX find a more robust way for this */
+static gchar *
+map_dev_to_partlabel (gchar *device, GError **error)
 {
-  gboolean retval = TRUE;
+  gchar *retval = NULL;
+  g_autoptr (GSubprocess) sproc = NULL;
   GError *ierror = NULL;
-  gchar *snapshot_root = NULL;
-  gchar *snapshot_usr = NULL;
-  gchar *subvol_id = NULL;
+  GPtrArray *args = g_ptr_array_new_full(8, NULL);
 
-  if (verbose_flag)
-    g_printf("Update /usr with btrfs snapshots...\n");
+  if (debug_flag)
+    g_printf("Get partition label for '/dev%s'...\n", device);
 
-  /* Create at first the root snapshot, so that we can mount /usr
-     later on it to update the kernel */
-  if (!snapper_create (NULL, &snapshot_root, &ierror))
+  gchar *sharg = g_strjoin (NULL, "/bin/ls -l /dev/disk/by-partlabel/ |grep ",
+			    device, "$ |sed -e 's|.*\\(USR_[A-Z]\\).*|\\1|g'", NULL);
+
+  g_ptr_array_add(args, "/bin/sh");
+  g_ptr_array_add(args, "-c");
+  g_ptr_array_add(args, sharg);
+  g_ptr_array_add(args, NULL);
+
+    sproc = g_subprocess_newv((const gchar * const *)args->pdata,
+                            G_SUBPROCESS_FLAGS_STDOUT_PIPE, &ierror);
+  if (sproc == NULL)
     {
-      g_propagate_error(error, ierror);
-      return FALSE;
-    }
-
-  gchar *snapshot_root_path = g_strjoin("/", "/.snapshots",
-					snapshot_root, "snapshot", NULL);
-  if (!btrfs_set_readonly (snapshot_root_path, false, &ierror))
-    {
-      g_propagate_error(error, ierror);
-      retval = FALSE;
+      g_propagate_prefixed_error(error, ierror, "Failed to start getting partition label: ");
       goto cleanup;
     }
 
-  /* Create snapshot for new /usr */
-
-  if (!snapper_create ("usr", &snapshot_usr, &ierror))
+  if (!g_subprocess_wait_check(sproc, NULL, &ierror))
     {
-      g_propagate_error(error, ierror);
-      retval = FALSE;
+      g_propagate_prefixed_error(error, ierror,
+                                 "Failed to execute getting partition label: ");
       goto cleanup;
     }
 
-  gchar *usr_snapshot_path = g_strjoin("/", "/usr/.snapshots",
-				       snapshot_usr, "snapshot", NULL);
-  if (!btrfs_set_readonly (usr_snapshot_path, false, &ierror))
+  gchar *stdout;
+  gchar *stderr;
+  if (!g_subprocess_communicate_utf8 (sproc, NULL, NULL, &stdout, &stderr, &ierror))
     {
-      g_propagate_error(error, ierror);
-      retval = FALSE;
+      g_propagate_prefixed_error(error, ierror,
+                                 "Failed to read stdout to get partition label: ");
       goto cleanup;
+
     }
 
-  /* desync does not remove old files, it just untars the new data.
-     Remove everything ourself...
-     This needs to be fixed with a better casync/desync replacement */
-  if (!rmdir_rf (usr_snapshot_path, NULL, &ierror))
+  if (stdout)
     {
-      g_propagate_error(error, ierror);
-      retval = FALSE;
-      goto cleanup;
+      /* Remove trailing "\n" from output */
+      int len = strlen(stdout);
+      if (stdout[len - 1] == '\n')
+        stdout[len - 1] = '\0';
+      retval = g_strdup(stdout);
     }
-
-  if (!extract_image(bundle, usr_snapshot_path, store, &ierror))
+  else
     {
-      g_propagate_error(error, ierror);
-      retval = FALSE;
-      goto cleanup;
-    }
-
-  /* make sure /usr/.snapshots mountpoint exist */
-  gchar *snapshots_dir = g_strjoin("/", usr_snapshot_path, ".snapshots", NULL);
-  if (!g_file_test(snapshots_dir, G_FILE_TEST_IS_DIR))
-    {
-      gint ret;
-      ret = g_mkdir_with_parents(snapshots_dir, 0750);
-
-      if (ret != 0)
-        {
-          g_set_error(error, G_FILE_ERROR, G_FILE_ERROR_FAILED,
-                      "Failed creating mount path '%s'", snapshots_dir);
-          return FALSE;
-        }
-    }
-  free (snapshots_dir);
-
-
-  /* touch /usr for systemd */
-  utimensat(AT_FDCWD, usr_snapshot_path, NULL, 0);
-
-  /* make /usr snapshot readonly again */
-  if (!btrfs_set_readonly (usr_snapshot_path, true, &ierror))
-    {
-      g_propagate_error(error, ierror);
-      retval = FALSE;
-      goto cleanup;
-    }
-
-  if (!adjust_etc_fstab_usr_btrfs (snapshot_root_path, snapshot_usr, &ierror))
-    {
-      g_propagate_error(error, ierror);
-      retval = FALSE;
-      goto cleanup;
-    }
-
-  if (!setup_chroot (snapshot_root_path, TIU_ROOT_DIR, &ierror))
-    {
-      g_propagate_error(error, ierror);
-      retval = FALSE;
-      goto cleanup;
-    }
-
-  if (!bind_mount(usr_snapshot_path, TIU_ROOT_DIR, "usr", &ierror))
-    {
-      g_propagate_error(error, ierror);
-      retval = FALSE;
-      goto cleanup;
-    }
-
-  if (!mount_boot_efi (TIU_ROOT_DIR, &ierror))
-    {
-      g_propagate_error(error, ierror);
-      retval = FALSE;
-      goto cleanup;
-    }
-
-  /* XXX Mount /var inside snapshot, so that we can write the log files.
-     Needs a better way to handle the log files */
-  if (!bind_mount ("/var", TIU_ROOT_DIR, NULL, &ierror))
-    {
-      g_propagate_error(error, ierror);
-      retval = FALSE;
-      goto cleanup;
-    }
-
-  if (!update_kernel (TIU_ROOT_DIR, &ierror))
-    {
-      g_propagate_error(error, ierror);
-      retval = FALSE;
-      goto cleanup;
-    }
-
-  if (!update_bootloader (TIU_ROOT_DIR, &ierror))
-    {
-      g_propagate_error(error, ierror);
-      retval = FALSE;
-      goto cleanup;
-    }
-
-  if (!btrfs_get_subvolume_id (snapshot_root_path, "/.snapshots",
-			       &subvol_id, &ierror))
-    {
-      g_propagate_error(error, ierror);
-      retval = FALSE;
-      goto cleanup;
-    }
-
-  if (!btrfs_set_default (subvol_id, snapshot_root_path, &ierror))
-    {
-      g_propagate_error(error, ierror);
+      g_set_error(error, G_FILE_ERROR, g_file_error_from_errno(EPIPE),
+                  "Failed to read stdout to get partition label:");
       retval = FALSE;
       goto cleanup;
     }
 
  cleanup:
-  if (ierror != NULL)
-    umount_chroot(TIU_ROOT_DIR, TRUE, NULL);
-  else
-    umount_chroot(TIU_ROOT_DIR, FALSE, &ierror);
-
-  if (snapshot_usr)
-    free (snapshot_usr);
-  if (snapshot_root)
-    free (snapshot_root);
-  if (subvol_id)
-    free (subvol_id);
+  g_ptr_array_free (args, TRUE);
+  if (sharg)
+    free (sharg);
 
   return retval;
 }
@@ -441,7 +343,8 @@ get_next_partition (GError **error)
 {
   struct mntent *ent;
   FILE *f;
-  char *new_dev = NULL;
+  GError *ierror = NULL;
+  char *curr_dev = NULL;
 
   f = setmntent ("/proc/mounts", "r");
   if (f == NULL)
@@ -456,76 +359,73 @@ get_next_partition (GError **error)
     {
       if (strcmp (ent->mnt_dir, "/usr") == 0)
 	{
-	  printf("%s %s\n", ent->mnt_fsname, ent->mnt_dir);
-
-	  new_dev = malloc (strlen (ent->mnt_fsname) + 2); /* +2: one for '\0', one if we go from 9->10 */
-	  /* XXX check for failed malloc */
-	  strcpy (new_dev, ent->mnt_fsname);
+	  curr_dev = map_dev_to_partlabel (&(ent->mnt_fsname)[4], &ierror);
+	  if (curr_dev == NULL)
+	    {
+	      g_propagate_error(error, ierror);
+	      return NULL;
+	    }
 	  break;
 	}
     }
 
   endmntent(f);
 
-  if (new_dev == NULL)
+  if (curr_dev == NULL)
     {
       /* XXX set error that we haven't found the device */
       return NULL;
     }
 
-  size_t len = strlen (new_dev);
-  char *cp = &new_dev[len];
-  for (size_t i = 1; i < len; i++)
-    {
-      if (new_dev[len - i] >= '0' && new_dev[len - i] <= '9')
-	cp--;
-      else
-	break;
-    }
-  /* XXX use strtoul */
-  int part_nr = atoi (cp);
+  if (debug_flag)
+    printf ("Found current partition label for /usr: %s\n", curr_dev);
 
-  if (part_nr < 1)
-    /* XXX error message */
-    return NULL;
+  /* XXXX create next partition */
 
-  ++part_nr;
-  /* XXX make min and max partition number configureable */
-  if (part_nr == 5)
-    part_nr = 3;
-
-  *cp = '\0';
-  sprintf (new_dev, "%s%i", new_dev, part_nr);
-
-  return new_dev;
+  return curr_dev;
 }
 
-static gboolean
-update_system_usr_AB (TIUBundle *bundle __attribute__((unused)),
-		      const gchar *store, GError **error)
+gboolean
+update_system (const gchar *archive, GError **error)
 {
   gboolean retval = TRUE;
   GError *ierror = NULL;
-  gchar *snapshot_root = NULL;
-  gchar *subvol_id = NULL;
   gchar *device = NULL;
 
   if (verbose_flag)
-    g_printf("Update /usr with A/B partitions...\n");
+    g_printf("Update /usr...\n");
 
-  if (!snapper_create (NULL, &snapshot_root, &ierror))
-    {
-      g_propagate_error(error, ierror);
-      return FALSE;
-    }
-
-  device = get_next_partition(&ierror); /* XXX make sure device get free'd */
-  if (device == NULL)
+  if ((device = get_next_partition(&ierror)) == NULL)
     {
       if (ierror != NULL)
 	g_propagate_error(error, ierror);
       return FALSE;
     }
+
+  /* we have at minimum two partitions A/B to switch between.
+     /dev/update-image-usr should be a symlink to the next free partition. */
+  remove("/dev/update-image-usr");
+  /* XXXX find correct partlabel */
+  if (symlink("/dev/disk/by-partlabel/USR_B", "/dev/update-image-usr"))
+    {
+      int err = errno;
+      g_set_error(error, G_FILE_ERROR, g_file_error_from_errno(err),
+                  "failed to create symlink: %s", g_strerror(err));
+      retval = FALSE;
+      goto cleanup;
+    }
+
+  if (debug_flag)
+    g_printf("Calling swupdate...\n");
+
+  if (!swupdate_deploy (archive, &ierror))
+    {
+      g_propagate_error(error, ierror);
+      retval = FALSE;
+      goto cleanup;
+    }
+
+  remove("/dev/update-image-usr");
 
   const gchar *mountpoint = "/var/lib/tiu/mount";
   if (!g_file_test(mountpoint, G_FILE_TEST_IS_DIR))
@@ -537,39 +437,15 @@ update_system_usr_AB (TIUBundle *bundle __attribute__((unused)),
         {
           g_set_error(error, G_FILE_ERROR, G_FILE_ERROR_FAILED,
                       "Failed creating mount path '%s'", mountpoint);
-          return FALSE;
+	  retval = FALSE;
+	  goto cleanup;
         }
     }
-
-  if (debug_flag)
-    g_printf("Mounting partition '%s' to '%s'\n", device, mountpoint);
-
-  /* XXX we should have an entry in the config defining the used filesystem type.
-     So that we could e.g. use ext4 instead of xfs */
-  if (mount(device, mountpoint, "xfs", 0, NULL))
-    {
-      int err = errno;
-      g_set_error(&ierror, G_FILE_ERROR, g_file_error_from_errno(err),
-                  "failed to mount partition %s: %s", device, g_strerror(err));
-      retval = FALSE;
-      goto cleanup;
-    }
-
-  if (!extract_image(bundle, mountpoint, store, &ierror))
-    {
-      g_propagate_error(error, ierror);
-      retval = FALSE;
-      goto cleanup;
-    }
-
-
 
   /* touch /usr for systemd */
   utimensat(AT_FDCWD, mountpoint, NULL, 0);
 
-  gchar *snapshot_root_path = g_strjoin("/", "/.snapshots",
-					snapshot_root, "snapshot", NULL);
-  if (!btrfs_set_readonly (snapshot_root_path, false, &ierror))
+  if (!update_kernel (NULL, "B", &ierror))
     {
       g_propagate_error(error, ierror);
       retval = FALSE;
@@ -577,42 +453,13 @@ update_system_usr_AB (TIUBundle *bundle __attribute__((unused)),
     }
 
 #if 0
-  if (!adjust_etc_fstab_usr_AB (snapshot_root_path, snapshot_usr, &ierror))
-    {
-      g_propagate_error(error, ierror);
-      retval = FALSE;
-      goto cleanup;
-    }
-#endif
-
-  if (!update_kernel (NULL, &ierror))
-    {
-      g_propagate_error(error, ierror);
-      retval = FALSE;
-      goto cleanup;
-    }
-
   if (!update_bootloader (NULL, &ierror))
     {
       g_propagate_error(error, ierror);
       retval = FALSE;
       goto cleanup;
     }
-
-  if (!btrfs_get_subvolume_id (snapshot_root_path, "/.snapshots",
-			       &subvol_id, &ierror))
-    {
-      g_propagate_error(error, ierror);
-      retval = FALSE;
-      goto cleanup;
-    }
-
-  if (!btrfs_set_default (subvol_id, snapshot_root_path, &ierror))
-    {
-      g_propagate_error(error, ierror);
-      retval = FALSE;
-      goto cleanup;
-    }
+#endif
 
  cleanup:
   if (device)
@@ -626,23 +473,9 @@ update_system_usr_AB (TIUBundle *bundle __attribute__((unused)),
       g_set_error(error, G_FILE_ERROR, g_file_error_from_errno(err),
 		  "failed to umount %s: %s", mountpoint, g_strerror(err));
     }
+#else
+    {}
 #endif
-
-  if (snapshot_root)
-    free (snapshot_root);
-  if (subvol_id)
-    free (subvol_id);
 
   return retval;
 }
-
-gboolean
-update_system (TIUBundle *bundle, const gchar *store, GError **error)
-{
-  if (access ("/usr/.snapshots", F_OK) == 0)
-    return update_system_usr_btrfs (bundle, store, error);
-  else
-    return update_system_usr_AB (bundle, store, error);
-}
-
-#endif

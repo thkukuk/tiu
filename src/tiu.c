@@ -305,19 +305,19 @@ main(int argc, char **argv)
       g_printf("System successfully installed...\n");
     }
 
-#if 0 /* XXX */
   else if (strcmp (argv[1], UPDATE) == 0)
     {
-      TIUBundle *bundle = NULL;
+      gchar *location = NULL;
 
-      read_config(UPDATE, NULL, &archive_file, &archive_md5sum, &disk_layout,
-		  &config_store);
+      read_config(UPDATE, &archive_file, &archive_md5sum, &disk_layout);
 
-      if (!download_check_mount (archive_file, archive_md5sum, &bundle,
-				 config_store, &chunk_store))
+      if (!download_and_verify (archive_file, archive_md5sum, &location))
 	exit (1);
 
-      if (!update_system (bundle, chunk_store, &error))
+      if (verbose_flag)
+        g_printf("Updating using %s\n", archive_file);
+
+      if (!update_system (location, &error))
 	{
 	  if (error)
 	    {
@@ -328,8 +328,8 @@ main(int argc, char **argv)
 	    g_fprintf (stderr, "ERROR: system update failed!\n");
 	  exit (1);
 	}
+      g_printf("System successfully updated...\n");
     }
-#endif
   else
     {
       g_fprintf (stderr, "ERROR: no argument given!\n");
