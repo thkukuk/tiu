@@ -35,6 +35,7 @@ extern gboolean workdir_setup (const gchar *contentpath, const gchar **workdir, 
 extern gboolean workdir_destroy (const gchar *workdir, GError **error);
 extern gboolean rm_rf (GFile *file, GCancellable *cancellable, GError **error);
 extern gboolean rmdir_rf (const gchar *dir, GCancellable *cancellable, GError **error);
+extern gboolean create_etc_hwrevision (const gchar *sysroot, GError **error);
 
 #ifdef __cplusplus
 }

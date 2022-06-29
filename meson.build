@@ -46,6 +46,7 @@ add_project_arguments(cc.get_supported_arguments(possible_cc_flags), language : 
 libtiu_src = files(
   'lib/btrfs.c',
   'lib/extract_image.c',
+  'lib/hwrevision.c',
   'lib/install.c',
   'lib/mount.c',
   'lib/network.c',

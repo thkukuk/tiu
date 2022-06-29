@@ -232,6 +232,14 @@ install_system (const gchar *archive, const gchar *device,
       goto cleanup;
     }
 
+  /* Create hwrevision file inside install environment, else
+     swupdate will not write the image */
+  if (!create_etc_hwrevision(NULL, &ierror))
+    {
+      g_propagate_error(error, ierror);
+      goto cleanup;
+    }
+
 #if 1
   if (!swupdate_deploy (archive, &ierror))
 #else
@@ -257,6 +265,14 @@ install_system (const gchar *archive, const gchar *device,
 
   if (!exec_script (LIBEXEC_TIU"/populate-etc", device,
 		    &ierror, NULL, LOG"populate-etc.log"))
+    {
+      g_propagate_error(error, ierror);
+      goto cleanup;
+    }
+
+  /* Create hwrevision file inside freshly installed system
+     for updates. */
+  if (!create_etc_hwrevision ("/mnt", &ierror))
     {
       g_propagate_error(error, ierror);
       goto cleanup;
