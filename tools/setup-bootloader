@@ -46,6 +46,7 @@ for i in "${ROOTDIR}"/usr/lib/modules/* ; do
         run "cp -a \"${ROOTDIR}/usr/lib/modules/$KVER/$f\" \"${ROOTDIR}/boot/A/$f-$KVER\""
     done
     run "chroot ${ROOTDIR} dracut --kernel-image \"/boot/A/$f-$KVER\" \"/boot/A/initrd-$KVER\""
+    run "chroot ${ROOTDIR} /usr/libexec/tiu/create-grub-entry A ${KVER} > /boot/A/grub-entry.cfg"
 done
 
 run "sed -i -e 's|GRUB_CMDLINE_LINUX_DEFAULT=.*|GRUB_CMDLINE_LINUX_DEFAULT=\"rw quiet systemd.show_status=1 mitigations=auto \\\\\$ignition_firstboot\"|g' ${ROOTDIR}/etc/default/grub"

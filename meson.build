@@ -110,6 +110,7 @@ tiu = executable(
 )
 
 tools = files(
+  'tools/create-grub-entry',
   'tools/logging',
   'tools/finish',
   'tools/setup-bootloader',
@@ -127,7 +128,7 @@ install_data(
 config = files(
   'conf/tiu.conf',
   'conf/usr-AB.yaml',
-  'conf/09_linux',
+  'conf/09_partAB',
 )
 
 install_data(

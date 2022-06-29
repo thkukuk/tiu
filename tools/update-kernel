@@ -1,20 +1,30 @@
 #!/bin/sh
 
-. $(dirname $0)/logging
+PART=$1
+
+if [ -z "$PART" ]; then
+    echo "ERROR - Missing argument"
+    exit 1
+fi
+
+run "mkdir -p /boot/${PART}"
 
 FILES=".vmlinuz.hmac System.map sysctl.conf vmlinuz"
 
 for i in ${FILES} initrd ; do
-    run "rm -f /boot/\"${i}\"*"
+    run "rm -f /boot/${PART}\"${i}\"*"
 done
 
 # Install the kernel
 for i in /usr/lib/modules/* ; do
     KVER=$(basename "$i")
     for f in .vmlinuz.hmac System.map sysctl.conf vmlinuz; do
-        run "cp -a \"/usr/lib/modules/$KVER/$f\" \"/boot/$f-$KVER\""
+        run "cp -a \"/usr/lib/modules/$KVER/$f\" \"/boot/${PART}/$f-$KVER\""
     done
     log_info "- - - dracut for $KVER - - -"
-    run "dracut --kver \"$KVER\""
+    run "dracut --kernel-image \"/boot/${PART}/$f-$KVER\" \"/boot/${PART}/initrd-$KVER\""
     log_info "- - - end dracut - - -"
 done
+
+# Create grub config
+/usr/libexec/tiu/create-grub-entry ${PART} ${KVER} > /boot/${PART}/grub-entry.cfg

@@ -1,0 +1,22 @@
+#!/bin/sh
+
+. /etc/default/grub
+
+DIR=$1
+KVER=$2
+
+if [ -z "${DIR}" ] || [ -z "${KVER}" ]; then
+    log_crit "ERROR: Usage: $0 PARTITION KVER"
+fi
+
+echo "menuentry 'openSUSE MicroOS, partition ${DIR} (Linux ${KVER})' {"
+echo "        load_video"
+echo "        set gfxpayload=keep"
+echo "        insmod gzio"
+echo "        insmod part_gpt"
+echo "        insmod ext2"
+echo "        echo    'Loading Linux ${KVER} ...'"
+echo "        linux   /boot/${DIR}/vmlinuz-${KVER} root=PARTLABEL=ROOT ${extra_cmdline} ${GRUB_CMDLINE_LINUX} mount.usr=PARTLABEL=USR_${DIR} mount.usrflags=ro ${GRUB_CMDLINE_LINUX_DEFAULT}"
+echo "        echo    'Loading initial ramdisk ...'"
+echo "        initrd  /boot/B/initrd-${KVER}"
+echo "}"

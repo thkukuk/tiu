@@ -47,7 +47,7 @@ create_etc_hwrevision (const gchar *sysroot, GError **error)
 
   uname(&uname_data); /* XXX error checking */
 
-  if (asprintf (&content, "arch %s", uname_data.machine) < 0)
+  if (asprintf (&content, "arch %s\n", uname_data.machine) < 0)
     {
       /* g_set_error for out of memory? */
       retval = FALSE;

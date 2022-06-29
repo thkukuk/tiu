@@ -198,7 +198,7 @@ update_kernel (gchar *chroot, gchar *partition, GError **error)
       g_ptr_array_add(args, chroot);
     }
   g_ptr_array_add(args, "/usr/libexec/tiu/update-kernel");
-  g_ptr_array_add(args, partition);
+  g_ptr_array_add(args, &partition[4]);
   g_ptr_array_add(args, NULL);
 
   sproc = g_subprocess_newv((const gchar * const *)args->pdata,
@@ -380,9 +380,35 @@ get_next_partition (GError **error)
   if (debug_flag)
     printf ("Found current partition label for /usr: %s\n", curr_dev);
 
-  /* XXXX create next partition */
 
-  return curr_dev;
+  gchar *next_dev = g_strdup (curr_dev);
+
+  /* USR_A -> USR_B, ... */
+  next_dev[strlen(next_dev)-1]++;
+
+  gchar *test_dev = g_strjoin("/", "/dev/disk/by-partlabel", next_dev, NULL);
+
+  if (g_file_test(test_dev, G_FILE_TEST_EXISTS))
+    {
+      free (test_dev);
+    }
+  else
+    {
+      /* so next partition does not exist, so start by USR_A again */
+      next_dev[strlen(next_dev)-1] = 'A';
+
+      if (strcmp (curr_dev, next_dev) == 0)
+	{
+	  g_set_error(error, G_FILE_ERROR, G_FILE_ERROR_FAILED,
+		      "No free partition found!");
+	  free (curr_dev);
+	  free (next_dev);
+	  return NULL;
+	}
+    }
+
+  free (curr_dev);
+  return next_dev;
 }
 
 gboolean
@@ -390,30 +416,35 @@ update_system (const gchar *archive, GError **error)
 {
   gboolean retval = TRUE;
   GError *ierror = NULL;
-  gchar *device = NULL;
+  gchar *next_partlabel = NULL;
 
   if (verbose_flag)
     g_printf("Update /usr...\n");
 
-  if ((device = get_next_partition(&ierror)) == NULL)
+  if ((next_partlabel = get_next_partition(&ierror)) == NULL)
     {
       if (ierror != NULL)
 	g_propagate_error(error, ierror);
       return FALSE;
     }
 
+  if (verbose_flag)
+    g_printf ("Write new image to partition '%s'\n", next_partlabel);
+
   /* we have at minimum two partitions A/B to switch between.
      /dev/update-image-usr should be a symlink to the next free partition. */
   remove("/dev/update-image-usr");
-  /* XXXX find correct partlabel */
-  if (symlink("/dev/disk/by-partlabel/USR_B", "/dev/update-image-usr"))
+  gchar *device = g_strjoin("/", "/dev/disk/by-partlabel", next_partlabel, NULL);
+  if (symlink(device, "/dev/update-image-usr"))
     {
       int err = errno;
       g_set_error(error, G_FILE_ERROR, g_file_error_from_errno(err),
                   "failed to create symlink: %s", g_strerror(err));
       retval = FALSE;
+      free (device);
       goto cleanup;
     }
+  free (device);
 
   if (debug_flag)
     g_printf("Calling swupdate...\n");
@@ -424,8 +455,6 @@ update_system (const gchar *archive, GError **error)
       retval = FALSE;
       goto cleanup;
     }
-
-  remove("/dev/update-image-usr");
 
   const gchar *mountpoint = "/var/lib/tiu/mount";
   if (!g_file_test(mountpoint, G_FILE_TEST_IS_DIR))
@@ -445,7 +474,7 @@ update_system (const gchar *archive, GError **error)
   /* touch /usr for systemd */
   utimensat(AT_FDCWD, mountpoint, NULL, 0);
 
-  if (!update_kernel (NULL, "B", &ierror))
+  if (!update_kernel (NULL, next_partlabel, &ierror))
     {
       g_propagate_error(error, ierror);
       retval = FALSE;
@@ -462,8 +491,10 @@ update_system (const gchar *archive, GError **error)
 #endif
 
  cleanup:
-  if (device)
-    free (device);
+  remove("/dev/update-image-usr");
+
+  if (next_partlabel)
+    free (next_partlabel);
 
   if (umount2 (mountpoint, UMOUNT_NOFOLLOW))
     /* XXX print error in cleanup really helpful? Will it overwrite original error? */

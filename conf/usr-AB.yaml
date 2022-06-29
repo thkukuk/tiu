@@ -16,7 +16,7 @@ partitions:
         - number: 3
           size: 1GB
           type: linux
-          label: ROOT_A
+          label: ROOT
         - number: 3
           size: 1GiB
           type: linux
