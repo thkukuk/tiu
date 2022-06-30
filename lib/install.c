@@ -27,7 +27,7 @@
 #include "tiu-swupdate.h"
 #include "tiu-errors.h"
 
-#define LIBEXEC_TIU "/usr/libexec/tiu/"
+#define LIBEXEC_TIU "/usr/libexec/tiu"
 
 static gboolean
 exec_script (const gchar *script, const gchar *device, GError **error,
@@ -193,14 +193,14 @@ install_system (const gchar *archive, const gchar *device,
       return FALSE;
     }
 
-  if (!exec_script (LIBEXEC_TIU"setup-disk", device, &ierror,
+  if (!exec_script (LIBEXEC_TIU"/setup-disk", device, &ierror,
 		    disk_layout, LOG"setup-disk.log"))
     {
       g_propagate_error(error, ierror);
       goto cleanup;
     }
 
-  if (!exec_script (LIBEXEC_TIU"setup-root", device,
+  if (!exec_script (LIBEXEC_TIU"/setup-root", device,
 		    &ierror, NULL, LOG"setup-root.log"))
     {
       g_propagate_error(error, ierror);
@@ -284,14 +284,14 @@ install_system (const gchar *archive, const gchar *device,
       goto cleanup;
     }
 
-  if (!exec_script (LIBEXEC_TIU"setup-bootloader", device,
+  if (!exec_script (LIBEXEC_TIU"/setup-bootloader", device,
 		    &ierror, NULL, LOG"setup-bootloader.log"))
     {
       g_propagate_error(error, ierror);
       goto cleanup;
     }
 
-  if (!exec_script (LIBEXEC_TIU"finish", device,
+  if (!exec_script (LIBEXEC_TIU"/finish", device,
 		    &ierror, NULL, LOG"finish.log"))
     {
       g_propagate_error(error, ierror);
