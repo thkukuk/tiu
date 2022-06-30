@@ -6,6 +6,7 @@ ROOTDIR=/mnt
 
 # We need the root account and systemd users in initramfs
 run "chroot ${ROOTDIR} systemd-sysusers system-user-root.conf"
+run "chroot ${ROOTDIR} systemd-sysusers system-group-kvm.conf"
 run "chroot ${ROOTDIR} systemd-sysusers system-group-hardware.conf"
 for i in ${ROOTDIR}/usr/lib/sysusers.d/systemd*.conf dbus.conf; do
     run "chroot ${ROOTDIR} systemd-sysusers $(basename $i)"
