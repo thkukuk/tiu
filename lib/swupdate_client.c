@@ -29,6 +29,7 @@
 #include "tiu-internal.h"
 #include "tiu-swupdate.h"
 
+GError *ierror = NULL;
 static int fd = -1;
 static pthread_mutex_t mymutex;
 static pthread_cond_t cv_end = PTHREAD_COND_INITIALIZER;
@@ -60,10 +61,27 @@ readimage (char **p, int *size)
 static int
 printstatus (ipc_message *msg)
 {
-  if (verbose_flag)
-    g_printf ("Status: %d message: %s\n",
-	      msg->data.status.current,
-	      strlen(msg->data.status.desc) > 0 ? msg->data.status.desc : "");
+  switch (msg->data.status.current)
+    {
+    case FAILURE:
+      g_fprintf (stderr, "ERROR: %s\n",
+		 strlen(msg->data.status.desc) > 0 ? msg->data.status.desc : "");
+      g_set_error(&ierror, G_FILE_ERROR, G_FILE_ERROR_FAILED,
+                  strlen(msg->data.status.desc) > 0 ? msg->data.status.desc : "");
+      break;
+    case START:
+    case SUCCESS:
+      if (verbose_flag)
+	g_printf ("%s\n",
+		  strlen(msg->data.status.desc) > 0 ? msg->data.status.desc : "");
+      break;
+    default:
+      if (debug_flag)
+	g_printf ("Status: %d message: %s\n",
+		  msg->data.status.current,
+		  strlen(msg->data.status.desc) > 0 ? msg->data.status.desc : "");
+      break;
+    }
   return 0;
 }
 
@@ -125,9 +143,12 @@ swupdate_deploy (const char* archive, GError **error)
 
   if (retval != TRUE)
     {
-      /* Find a way to get the real error... */
-      g_set_error(error, G_FILE_ERROR, G_FILE_ERROR_FAILED,
-                  "Updating /usr with swupdate failed!");
+      if (ierror != NULL)
+	g_propagate_prefixed_error(error, ierror,
+				   "Updating /usr failed: ");
+      else
+	g_set_error(error, G_FILE_ERROR, G_FILE_ERROR_FAILED,
+		    "Updating /usr with swupdate failed!");
     }
 
   if (verbose_flag)
