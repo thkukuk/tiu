@@ -7,6 +7,8 @@ if [ -z "$PART" ]; then
     exit 1
 fi
 
+. $(dirname $0)/logging
+
 run "mkdir -p /boot/${PART}"
 
 FILES=".vmlinuz.hmac System.map sysctl.conf vmlinuz"
@@ -22,7 +24,7 @@ for i in /usr/lib/modules/* ; do
         run "cp -a \"/usr/lib/modules/$KVER/$f\" \"/boot/${PART}/$f-$KVER\""
     done
     log_info "- - - dracut for $KVER - - -"
-    run "dracut --kernel-image \"/boot/${PART}/$f-$KVER\" \"/boot/${PART}/initrd-$KVER\""
+    run "dracut -f --kernel-image \"/boot/${PART}/$f-$KVER\" \"/boot/${PART}/initrd-$KVER\""
     log_info "- - - end dracut - - -"
 done
 
