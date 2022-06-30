@@ -24,6 +24,8 @@
 static gchar *archive_file = NULL;
 static gchar *target_dir = NULL;
 static gboolean force_installation = false;
+static gboolean update_pre = false;
+static gboolean update_post = false;
 static GOptionEntry entries_extract[] = {
   {"archive", 'a', 0, G_OPTION_ARG_FILENAME, &archive_file, "swu archive", "FILENAME"},
   {"output", 'o', 0, G_OPTION_ARG_FILENAME, &target_dir, "target directory", "DIRECTORY"},
@@ -42,6 +44,8 @@ static GOptionGroup *install_group;
 
 static GOptionEntry entries_update[] = {
   {"archive", 'a', 0, G_OPTION_ARG_FILENAME, &archive_file, "swu archive", "FILENAME"},
+  {"pre", '\0', 0, G_OPTION_ARG_NONE, &update_pre, "called by swupdate before an update starts", NULL},
+  {"post", '\0', 0, G_OPTION_ARG_NONE, &update_post, "called by swupdate after an update", NULL},
   {0}
 };
 static GOptionGroup *update_group;
@@ -309,26 +313,57 @@ main(int argc, char **argv)
     {
       gchar *location = NULL;
 
-      read_config(UPDATE, &archive_file, &archive_md5sum, &disk_layout);
-
-      if (!download_and_verify (archive_file, archive_md5sum, &location))
-	exit (1);
-
-      if (verbose_flag)
-        g_printf("Updating using %s\n", archive_file);
-
-      if (!update_system (location, &error))
+      if (update_pre)
 	{
-	  if (error)
+	  if (!update_system_pre (&error))
 	    {
-	      g_fprintf (stderr, "ERROR: %s\n", error->message);
-	      g_clear_error (&error);
+	      if (error)
+		{
+		  g_fprintf (stderr, "ERROR: %s\n", error->message);
+		  g_clear_error (&error);
+		}
+	      else
+		g_fprintf (stderr, "ERROR: pre system update failed!\n");
+	      exit (1);
 	    }
-	  else
-	    g_fprintf (stderr, "ERROR: system update failed!\n");
-	  exit (1);
 	}
-      g_printf("System successfully updated...\n");
+      else if (update_post)
+	{
+	  if (!update_system_post (&error))
+	    {
+	      if (error)
+		{
+		  g_fprintf (stderr, "ERROR: %s\n", error->message);
+		  g_clear_error (&error);
+		}
+	      else
+		g_fprintf (stderr, "ERROR: post system update failed!\n");
+	      exit (1);
+	    }
+	}
+      else
+	{
+	  read_config(UPDATE, &archive_file, &archive_md5sum, &disk_layout);
+
+	  if (!download_and_verify (archive_file, archive_md5sum, &location))
+	    exit (1);
+
+	  if (verbose_flag)
+	    g_printf("Updating using %s\n", archive_file);
+
+	  if (!update_system (location, &error))
+	    {
+	      if (error)
+		{
+		  g_fprintf (stderr, "ERROR: %s\n", error->message);
+		  g_clear_error (&error);
+		}
+	      else
+		g_fprintf (stderr, "ERROR: system update failed!\n");
+	      exit (1);
+	    }
+	  g_printf("System successfully updated...\n");
+	}
     }
   else
     {

@@ -26,6 +26,8 @@ extern gboolean extract_image(const gchar *archive, const gchar *outputdir, GErr
 extern gboolean install_system (const gchar *archive, const gchar *device,
 		                const gchar *disk_layout, GError **error);
 extern gboolean update_system (const gchar *archive, GError **error);
+extern gboolean update_system_pre (GError **error);
+extern gboolean update_system_post (GError **error);
 extern gboolean download_archive (const gchar *archive, const gchar *archive_md5sum,
 				  gchar **location, GError **error);
 

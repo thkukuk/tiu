@@ -306,50 +306,47 @@ get_next_partition (GError **error)
   return next_dev;
 }
 
-gboolean
-update_system (const gchar *archive, GError **error)
+static gchar *
+internal_update_system_pre (GError **error)
 {
-  gboolean retval = TRUE;
   GError *ierror = NULL;
   gchar *next_partlabel = NULL;
-
-  if (verbose_flag)
-    g_printf("Update /usr...\n");
+  gchar *retval = NULL;
 
   if ((next_partlabel = get_next_partition(&ierror)) == NULL)
     {
       if (ierror != NULL)
 	g_propagate_error(error, ierror);
-      return FALSE;
+      return NULL;
     }
-
-  if (verbose_flag)
-    g_printf ("Write new image to partition '%s'\n", next_partlabel);
 
   /* we have at minimum two partitions A/B to switch between.
      /dev/update-image-usr should be a symlink to the next free partition. */
   remove("/dev/update-image-usr");
   gchar *device = g_strjoin("/", "/dev/disk/by-partlabel", next_partlabel, NULL);
-  if (symlink(device, "/dev/update-image-usr"))
+  if (symlink (device, "/dev/update-image-usr"))
     {
       int err = errno;
       g_set_error(error, G_FILE_ERROR, g_file_error_from_errno(err),
                   "failed to create symlink: %s", g_strerror(err));
-      retval = FALSE;
-      free (device);
-      goto cleanup;
+
+      retval = NULL;
     }
+  else
+    retval = g_strdup (next_partlabel);
+
   free (device);
+  if (next_partlabel)
+    free (next_partlabel);
 
-  if (debug_flag)
-    g_printf("Calling swupdate...\n");
+  return retval;
+}
 
-  if (!swupdate_deploy (archive, &ierror))
-    {
-      g_propagate_error(error, ierror);
-      retval = FALSE;
-      goto cleanup;
-    }
+static gboolean
+internal_update_system_post (gchar *next_partlabel, GError **error)
+{
+  gboolean retval = TRUE;
+  GError *ierror = NULL;
 
   const gchar *mountpoint = "/var/lib/tiu/mount";
   if (!g_file_test(mountpoint, G_FILE_TEST_IS_DIR))
@@ -365,9 +362,6 @@ update_system (const gchar *archive, GError **error)
 	  goto cleanup;
         }
     }
-
-  /* touch /usr for systemd */
-  utimensat(AT_FDCWD, mountpoint, NULL, 0);
 
   if (!update_kernel (NULL, next_partlabel, &ierror))
     {
@@ -396,9 +390,6 @@ update_system (const gchar *archive, GError **error)
  cleanup:
   remove("/dev/update-image-usr");
 
-  if (next_partlabel)
-    free (next_partlabel);
-
   if (umount2 (mountpoint, UMOUNT_NOFOLLOW))
     /* XXX print error in cleanup really helpful? Will it overwrite original error? */
 #if 0
@@ -410,6 +401,85 @@ update_system (const gchar *archive, GError **error)
 #else
     {}
 #endif
+
+  return retval;
+}
+
+gboolean
+update_system_pre (GError **error)
+{
+  GError *ierror = NULL;
+
+  if (internal_update_system_pre (&ierror) == NULL)
+    {
+      g_propagate_error (error, ierror);
+      return FALSE;
+    }
+
+  return TRUE;
+}
+
+gboolean
+update_system_post (GError **error)
+{
+  GError *ierror = NULL;
+  gchar *next_partlabel = NULL;
+
+  if ((next_partlabel = get_next_partition(&ierror)) == NULL)
+    {
+      if (ierror != NULL)
+	g_propagate_error(error, ierror);
+      return FALSE;
+    }
+
+  if (!internal_update_system_post (next_partlabel, &ierror))
+    {
+      g_propagate_error (error, ierror);
+      return FALSE;
+    }
+
+  return TRUE;
+}
+
+gboolean
+update_system (const gchar *archive, GError **error)
+{
+  gboolean retval = TRUE;
+  GError *ierror = NULL;
+  gchar *next_partlabel = NULL;
+
+  if (verbose_flag)
+    g_printf("Update /usr...\n");
+
+  if ((next_partlabel = internal_update_system_pre (&ierror)) == NULL)
+    {
+      g_propagate_error (error, ierror);
+      retval = FALSE;
+      goto cleanup;
+    }
+
+  if (verbose_flag)
+    g_printf ("Write new image to partition '%s'\n", next_partlabel);
+
+  if (debug_flag)
+    g_printf("Calling swupdate...\n");
+
+  if (!swupdate_deploy (archive, &ierror))
+    {
+      g_propagate_error(error, ierror);
+      retval = FALSE;
+      goto cleanup;
+    }
+
+  if (!internal_update_system_post (next_partlabel, &ierror))
+    {
+      g_propagate_error (error, ierror);
+      return FALSE;
+    }
+
+ cleanup:
+  if (next_partlabel)
+    free (next_partlabel);
 
   return retval;
 }

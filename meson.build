@@ -118,6 +118,8 @@ tools = files(
   'tools/setup-root',
   'tools/populate-etc',
   'tools/update-kernel',
+  'tools/swupdate-preinstall',
+  'tools/swupdate-postinstall',
 )
 
 install_data(

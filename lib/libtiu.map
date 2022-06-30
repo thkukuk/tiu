@@ -5,6 +5,8 @@ LIBTIU_1.0 {
     extract_image;
     install_system;
     update_system;
+    update_system_pre;
+    update_system_post;
     verbose_flag;
   local:
     *;
