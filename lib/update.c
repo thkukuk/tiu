@@ -28,158 +28,6 @@
 #include "tiu-swupdate.h"
 #include "tiu-mount.h"
 
-#if 0 /* XXX */
-
-#include "tiu-btrfs.h"
-
-static gboolean
-snapper_create (const gchar *config, gchar **output, GError **error)
-{
-  g_autoptr (GSubprocess) sproc = NULL;
-  GError *ierror = NULL;
-  GPtrArray *args = g_ptr_array_new_full(8, g_free);
-
-  if (debug_flag)
-    g_printf("Running snapper create for '%s'...\n",
-	     config?config:"root");
-
-  g_ptr_array_add(args, "snapper");
-  if (config)
-    {
-      g_ptr_array_add(args, "-c");
-      g_ptr_array_add(args, g_strdup(config));
-    }
-  g_ptr_array_add(args, "create");
-  g_ptr_array_add(args, "--print-number");
-  g_ptr_array_add(args, NULL);
-
-  sproc = g_subprocess_newv((const gchar * const *)args->pdata,
-                            G_SUBPROCESS_FLAGS_STDOUT_PIPE, &ierror);
-  if (sproc == NULL)
-    {
-      g_propagate_prefixed_error(error, ierror, "Failed to start snapper: ");
-      return FALSE;
-    }
-
-  if (!g_subprocess_wait_check(sproc, NULL, &ierror))
-    {
-      g_propagate_prefixed_error(error, ierror,
-                                 "Failed to execute snapper: ");
-      return FALSE;
-    }
-
-  gchar *stdout;
-  gchar *stderr;
-  if (!g_subprocess_communicate_utf8 (sproc, NULL, NULL, &stdout, &stderr, &ierror))
-    {
-      g_propagate_prefixed_error(error, ierror,
-                                 "Failed to read stdout: ");
-      return FALSE;
-    }
-
-  if (stdout)
-    {
-      /* Remove trailing "\n" from output */
-      int len = strlen(stdout);
-      if (stdout[len - 1] == '\n')
-	stdout[len - 1] = '\0';
-      *output = g_strdup(stdout);
-    }
-  else
-    {
-      *output = NULL;
-      g_set_error(error, G_FILE_ERROR, g_file_error_from_errno(EPIPE),
-		  "Failed to read stdout");
-      return FALSE;
-    }
-
-  return TRUE;
-}
-
-static gboolean
-adjust_etc_fstab_usr_btrfs (const gchar *path, const gchar *snapshot_usr, GError **error)
-{
-  g_autoptr (GSubprocess) sproc = NULL;
-  GError *ierror = NULL;
-  GPtrArray *args = g_ptr_array_new_full(8, NULL);
-  gboolean retval = TRUE;
-
-  gchar *fstab = g_strjoin("/", path, "etc/fstab", NULL);
-
-  if (debug_flag)
-    g_printf("Adjusting '%s'...\n", fstab);
-
-  gchar *sedarg = g_strjoin(NULL, "s|subvol=/.snapshots/.*/snapshot|subvol=/.snapshots/",
-			    snapshot_usr, "/snapshot|g", NULL);
-
-  g_ptr_array_add(args, "sed");
-  g_ptr_array_add(args, "-i");
-  g_ptr_array_add(args, "-e");
-  g_ptr_array_add(args, sedarg);
-  g_ptr_array_add(args, fstab);
-  g_ptr_array_add(args, NULL);
-
-  sproc = g_subprocess_newv((const gchar * const *)args->pdata,
-                            G_SUBPROCESS_FLAGS_STDOUT_PIPE, &ierror);
-  if (sproc == NULL)
-    {
-      g_propagate_prefixed_error(error, ierror, "Failed to start sed on /etc/fstab: ");
-      retval = FALSE;
-      goto cleanup;
-    }
-
-  if (!g_subprocess_wait_check(sproc, NULL, &ierror))
-    {
-      g_propagate_prefixed_error(error, ierror,
-                                 "Failed to execute sed on /etc/fstab: ");
-      retval = FALSE;
-      goto cleanup;
-    }
-
- cleanup:
-  g_ptr_array_free (args, TRUE);
-  g_free (sedarg);
-  g_free (fstab);
-
-  return retval;
-}
-
-static gboolean
-mount_boot_efi (gchar *target, GError **error)
-{
-  g_autoptr (GSubprocess) sproc = NULL;
-  GError *ierror = NULL;
-  GPtrArray *args = g_ptr_array_new_full(8, NULL);
-
-  if (debug_flag)
-    g_printf("Mount /boot/efi on %s/boot/efi...\n", target);
-
-  g_ptr_array_add(args, "chroot");
-  g_ptr_array_add(args, target);
-  g_ptr_array_add(args, "mount");
-  g_ptr_array_add(args, "/boot/efi");
-  g_ptr_array_add(args, NULL);
-
-  sproc = g_subprocess_newv((const gchar * const *)args->pdata,
-                            G_SUBPROCESS_FLAGS_STDOUT_PIPE, &ierror);
-  if (sproc == NULL)
-    {
-      g_propagate_prefixed_error(error, ierror, "Failed to run mount /boot/efi: ");
-      return FALSE;
-    }
-
-  if (!g_subprocess_wait_check(sproc, NULL, &ierror))
-    {
-      g_propagate_prefixed_error(error, ierror,
-                                 "Failed to execute mount /boot/efi: ");
-      return FALSE;
-    }
-
-  return TRUE;
-}
-
-#endif
-
 static gboolean
 update_kernel (gchar *chroot, gchar *partition, GError **error)
 {
@@ -268,6 +116,53 @@ update_bootloader (gchar *chroot, GError **error)
   return retval;
 }
 #endif
+
+static gboolean
+set_default_partition (gint menuentry_id, GError **error)
+{
+  g_autoptr (GSubprocess) sproc = NULL;
+  GError *ierror = NULL;
+  GPtrArray *args = g_ptr_array_new_full(8, NULL);
+  gboolean retval = TRUE;
+  gchar *entry = NULL;
+
+  if (debug_flag)
+    g_printf("Updating default boot entry to %i...\n", menuentry_id);
+
+  if (asprintf (&entry, "saved_entry=%i", menuentry_id) < 0)
+    {
+      /* XXX set usefull out of memory error message */
+      return FALSE;
+    }
+
+  g_ptr_array_add(args, "/usr/bin/grub2-editenv");
+  g_ptr_array_add(args, "-");
+  g_ptr_array_add(args, "set");
+  g_ptr_array_add(args, entry);
+  g_ptr_array_add(args, NULL);
+
+  sproc = g_subprocess_newv((const gchar * const *)args->pdata,
+                            G_SUBPROCESS_FLAGS_STDOUT_PIPE, &ierror);
+  if (sproc == NULL)
+    {
+      g_propagate_prefixed_error(error, ierror,
+				 "Failed to start grub2-editenv: ");
+      retval = FALSE;
+      goto cleanup;
+    }
+
+  if (!g_subprocess_wait_check(sproc, NULL, &ierror))
+    {
+      g_propagate_prefixed_error(error, ierror,
+                                 "Failed to execute grub2-editenv: ");
+      retval = FALSE;
+    }
+
+ cleanup:
+  g_ptr_array_free (args, TRUE);
+
+  return retval;
+}
 
 /* XXX find a more robust way for this */
 static gchar *
@@ -489,6 +384,14 @@ update_system (const gchar *archive, GError **error)
       goto cleanup;
     }
 #endif
+
+  gint menuentry_id = next_partlabel[4] - 'A';
+  if (!set_default_partition (menuentry_id, &ierror))
+    {
+      g_propagate_error(error, ierror);
+      retval = FALSE;
+      goto cleanup;
+    }
 
  cleanup:
   remove("/dev/update-image-usr");
