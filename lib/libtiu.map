@@ -4,6 +4,7 @@ LIBTIU_1.0 {
     download_archive;
     extract_image;
     install_system;
+    quiet_flag;
     update_system;
     update_system_pre;
     update_system_post;

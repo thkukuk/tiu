@@ -25,7 +25,6 @@
 #include "tiu-btrfs.h"
 #include "tiu-mount.h"
 #include "tiu-swupdate.h"
-#include "tiu-errors.h"
 
 #define LIBEXEC_TIU "/usr/libexec/tiu"
 
@@ -174,10 +173,12 @@ install_system (const gchar *archive, const gchar *device,
 
   if (archive == NULL)
     {
+      /* XXX
       g_set_error_literal (error,
 			   T_ARCHIVE_ERROR,
 			   T_ARCHIVE_ERROR_NO_DATA,
 			   "No valid archive available.");
+			   */
       return FALSE;
     }
 

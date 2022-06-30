@@ -30,6 +30,7 @@ extern "C" {
 
 extern gboolean verbose_flag;
 extern gboolean debug_flag;
+extern gboolean quiet_flag;
 
 extern gboolean workdir_setup (const gchar *contentpath, const gchar **workdir, GError **error);
 extern gboolean workdir_destroy (const gchar *workdir, GError **error);

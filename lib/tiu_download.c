@@ -91,7 +91,7 @@ download_archive (const gchar *archive, const gchar *archive_md5sum,
           return FALSE;
         }
 
-      if (verbose_flag)
+      if (!quiet_flag)
         g_printf("Remote URI detected, downloading tiu archive to '%s'...\n",
 		 *location);
 
@@ -111,7 +111,7 @@ download_archive (const gchar *archive, const gchar *archive_md5sum,
 				     archive);
           return FALSE;
         }
-      if (verbose_flag)
+      if (!quiet_flag)
         g_printf("Downloaded tiu archive to '%s'\n", *location);
     }
   else

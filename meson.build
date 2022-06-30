@@ -53,7 +53,6 @@ libtiu_src = files(
   'lib/rm_rf.c',
   'lib/swupdate_client.c',
   'lib/tiu_download.c',
-  'lib/tiu_errors.c',
   'lib/update.c',
   'lib/variables.c',
   'lib/workdir.c',

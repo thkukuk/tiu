@@ -289,7 +289,7 @@ main(int argc, char **argv)
       if (!download_and_verify (archive_file, archive_md5sum, &location))
 	exit (1);
 
-      if (verbose_flag)
+      if (!quiet_flag)
         g_printf("Installing %s with disk layout described in %s\n",
 	         archive_file, disk_layout);
 
@@ -348,7 +348,7 @@ main(int argc, char **argv)
 	  if (!download_and_verify (archive_file, archive_md5sum, &location))
 	    exit (1);
 
-	  if (verbose_flag)
+	  if (!quiet_flag)
 	    g_printf("Updating using %s\n", archive_file);
 
 	  if (!update_system (location, &error))
