@@ -35,6 +35,8 @@ run "ln -sf ../usr/share/factory/etc/grub.d ${ROOTDIR}/etc/"
 # Create input variables for grub.cfg
 run "mkdir -p ${ROOTDIR}/etc/default"
 run "cp -av ${ROOTDIR}/usr/share/factory/etc/default/grub ${ROOTDIR}/etc/default/grub"
+# set default to saved value
+run "sed -i -e 's|GRUB_DEFAULT=.*|GRUB_DEFAULT=saved|g' ${ROOTDIR}/etc/default/grub"
 
 # Install the kernel
 run "mkdir -p ${ROOTDIR}/boot/A"
