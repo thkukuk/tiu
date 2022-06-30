@@ -2,27 +2,20 @@
 * Add IMAGE_* tags to /etc/os-release
 * Make sure the filesystem image is as small as possible
 * Add dm-verity checksums to the image
-
-# Bootloader:
-* Create automatically entries for USR_A/USR_B/... partitions
-* Main grub.cfg should be "static" and source from USR_/USR_B/... configs
+* Set SELinux labels
 
 # Install:
 * SELinux support
 * Make sure we don't install on the disk we are running from
-* Use swupdate hardware support to find out if we install on the right disk
-* Use mount.usr, fix ignition and combustion to work with this
-* Create common-*-pc PAM configuration files
 
 # Update:
+* Put swupdate/tiu into a container, so that we can update the update stack
 * Check that the update images fits to the installed system and is newer
 * Implement block based update (swupdate)
   * Don't download full images for a few needed blocks
 * How to update the bootloader?
 * How to handle /etc including for rollback?
-* How to handle /boot/grub2/grub.cfg?
-  * We modify it with every update for all partitions
-  * How to revert on rollback?
+* How to handle/update /boot/grub2/grub.cfg?
 * Setup chroot to create initrd with dracut
 
 # General:
@@ -30,7 +23,7 @@
   * How to handle /root, /usr/local across all ROOT_X partitions? Rollback?
   * How to sync ROOT_X with ROOT_(X-1) at first boot of ROOT_X?
 * How to handle /etc? Rollback of config, too
-* Implement normal (means nearly silent), verbose and debug mode/flags
+* Improve logging: normal (means nearly silent), verbose and debug mode
 * Move more of the script code into the main code
 * Rescue partition/system
 * Factory reset
