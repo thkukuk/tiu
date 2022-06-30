@@ -83,7 +83,7 @@ lib = library(
   link_depends : mapfile,
   version : meson.project_version(),
   soversion : '0',
-  dependencies : [gio_dep, gio_unix_dep, libeconf_dep, libcurl_dep, 
+  dependencies : [gio_dep, gio_unix_dep, libeconf_dep, libcurl_dep,
                   openssl_dep, swupdate_dep, ],
 )
 
@@ -128,12 +128,20 @@ install_data(
 config = files(
   'conf/tiu.conf',
   'conf/usr-AB.yaml',
-  'conf/09_partAB',
 )
 
 install_data(
   config,
   install_dir : join_paths(get_option('datadir'), 'tiu'),
+)
+
+grub_d = files(
+  'grub.d/09_partAB',
+)
+
+install_data(
+  grub_d,
+  install_dir : join_paths(get_option('sysconfdir'), 'grub.d'),
 )
 
 # Unit tests
