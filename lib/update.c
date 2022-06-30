@@ -446,11 +446,12 @@ update_system (const gchar *archive, GError **error)
 {
   gboolean retval = TRUE;
   GError *ierror = NULL;
-  gchar *next_partlabel = NULL;
+  // gchar *next_partlabel = NULL;
 
-  if (verbose_flag)
+  if (!quiet_flag)
     g_printf("Update /usr...\n");
 
+#if 0
   if ((next_partlabel = internal_update_system_pre (&ierror)) == NULL)
     {
       g_propagate_error (error, ierror);
@@ -460,6 +461,7 @@ update_system (const gchar *archive, GError **error)
 
   if (verbose_flag)
     g_printf ("Write new image to partition '%s'\n", next_partlabel);
+#endif
 
   if (debug_flag)
     g_printf("Calling swupdate...\n");
@@ -471,15 +473,17 @@ update_system (const gchar *archive, GError **error)
       goto cleanup;
     }
 
+#if 0
   if (!internal_update_system_post (next_partlabel, &ierror))
     {
       g_propagate_error (error, ierror);
       return FALSE;
     }
+#endif
 
  cleanup:
-  if (next_partlabel)
-    free (next_partlabel);
+  //  if (next_partlabel)
+  //  free (next_partlabel);
 
   return retval;
 }
