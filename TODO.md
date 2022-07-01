@@ -3,10 +3,12 @@
 * Make sure the filesystem image is as small as possible
 * Add dm-verity checksums to the image
 * Set SELinux labels
+* Better OBS support in regard to signing the image
 
 # Install:
 * SELinux support
 * Make sure we don't install on the disk we are running from
+* Robust way to not pre/post scripts from swu image during installation
 
 # Update:
 * Put swupdate/tiu into a container, so that we can update the update stack
