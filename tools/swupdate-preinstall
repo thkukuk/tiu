@@ -1,3 +1,5 @@
 #!/bin/sh
 
-tiu update --pre
+if [ -d /boot/A ]; then
+	tiu update --pre
+fi

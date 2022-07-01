@@ -1,3 +1,5 @@
 #!/bin/sh
 
-tiu update --post
+if [ -d /boot/A ]; then
+	tiu update --post
+fi
