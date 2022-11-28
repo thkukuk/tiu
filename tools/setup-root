@@ -13,6 +13,8 @@ run "ln -sf usr/lib64 ${ROOTDIR}/lib64"
 run "mkdir -p ${ROOTDIR}/dev"
 run "mkdir -p ${ROOTDIR}/sys"
 run "mkdir -p ${ROOTDIR}/proc"
-# dracut does not work without this directories
+# dracut/install-kernel do not work without this directories
 run "mkdir -p ${ROOTDIR}/run"
 run "mkdir -p ${ROOTDIR}/var/tmp"
+run "mkdir -p ${ROOTDIR}/tmp"
+run "chmod 1777 ${ROOTDIR}/tmp"

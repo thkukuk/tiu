@@ -31,7 +31,7 @@ run "chroot ${ROOTDIR} /usr/bin/bootctl install"
 
 mkdir -p "${ROOTDIR}/etc/kernel"
 
-ENTRY_TOKEN=$(${ROOTDIR}/usr/lib/os-release; echo "$ID")
+ENTRY_TOKEN=$(. ${ROOTDIR}/usr/lib/os-release; echo "$ID")
 echo "$ENTRY_TOKEN" > "${ROOTDIR}/etc/kernel/entry-token"
 
 echo "root=PARTLABEL=ROOT rootflags=rw mount.usr=PARTLABEL=USR_A mount.usrflags=ro rw quiet systemd.show_status=1 mitigations=auto" > "${ROOTDIR}/etc/kernel/cmdline"
