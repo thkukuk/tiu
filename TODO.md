@@ -12,11 +12,12 @@
 
 # Update:
 * Put swupdate/tiu into a container, so that we can update the update stack
+* How to tell swupdate via IPC to download the image itself?
 * Check that the update images fits to the installed system and is newer
-* Implement block based update (swupdate)
+* Implement block based (Delta) update (swupdate)
   * Don't download full images for a few needed blocks
 * How to update the bootloader?
-* How to handle /etc including for rollback?
+* How to handle /etc for rollback?
 * How to handle/update /boot/grub2/grub.cfg?
 * Setup chroot to create initrd with dracut
 

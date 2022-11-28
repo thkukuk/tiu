@@ -285,8 +285,8 @@ install_system (const gchar *archive, const gchar *device,
       goto cleanup;
     }
 
-  if (!exec_script (LIBEXEC_TIU"/setup-bootloader", device,
-		    &ierror, NULL, LOG"setup-bootloader.log"))
+  if (!exec_script (LIBEXEC_TIU"/setup-bootloader-sd-boot", device,
+		    &ierror, NULL, LOG"setup-bootloader-sd-boot.log"))
     {
       g_propagate_error(error, ierror);
       goto cleanup;

@@ -1,0 +1,45 @@
+#!/bin/sh
+
+ROOTDIR=/var/lib/tiu/root
+
+device=
+while getopts ":d:o:" arg
+do
+    case $arg in
+	d)
+	    device="$OPTARG"
+	    ;;
+	o)
+	    logfile="$OPTARG"
+	    ;;
+	?)
+	    printf "Usage: %s: -d device -o logfile\n" "$0"
+            exit 2
+	    ;;
+    esac
+done
+
+. $(dirname $0)/logging
+
+if [ -z "$device" ]; then
+    printf "Usage: %s: -d device -o logfile\n" "$0"
+    exit 2
+fi
+
+# Install bootloader
+run "chroot ${ROOTDIR} /usr/bin/bootctl install"
+
+mkdir -p "${ROOTDIR}/etc/kernel"
+
+ENTRY_TOKEN=$(${ROOTDIR}/usr/lib/os-release; echo "$ID")
+echo "$ENTRY_TOKEN" > "${ROOTDIR}/etc/kernel/entry-token"
+
+echo "root=PARTLABEL=ROOT rootflags=rw mount.usr=PARTLABEL=USR_A mount.usrflags=ro rw quiet systemd.show_status=1 mitigations=auto" > "${ROOTDIR}/etc/kernel/cmdline"
+
+# Install the kernel
+for k in "${ROOTDIR}"/usr/lib/modules/*/vmlinuz; do
+    k=${k#"$ROOTDIR"}
+    v="${k%/*}"
+    v="${v##*/}"
+    run "chroot ${ROOTDIR} /usr/bin/kernel-install -v add \"$v\" \"$k\""
+done
