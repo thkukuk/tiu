@@ -1,46 +1,46 @@
 
 #include <glib/gprintf.h>
 #include <glib/gstdio.h>
-#include <openssl/md5.h>
+#include <openssl/sha.h>
 
 #include "tiu.h"
 #include "tiu-internal.h"
 #include "network.h"
 
 /*
-  Checking MD5SUM of the archive.
+  Checking SHA256SUM of the archive.
 */
 static gboolean
-check_md5sum(const gchar *filename, const gchar *md5sum)
+check_sha256sum(const gchar *filename, const gchar *sha256sum)
 {
-  unsigned char c[MD5_DIGEST_LENGTH];
+  unsigned char c[SHA256_DIGEST_LENGTH];
   int i;
-  MD5_CTX mdContext;
+  SHA256_CTX shaContext;
   int bytes;
   unsigned char data[1024];
-  char *filemd5 = (char*) malloc(33 *sizeof(char));
+  char *filesha256 = (char*) malloc(33 *sizeof(char));
 
   FILE *inFile = fopen (filename, "rb");
   if (inFile == NULL)
     return FALSE;
 
-  MD5_Init (&mdContext);
+  SHA256_Init (&shaContext);
 
   while ((bytes = fread (data, 1, 1024, inFile)) != 0)
 
-  MD5_Update (&mdContext, data, bytes);
+  SHA256_Update (&shaContext, data, bytes);
 
-  MD5_Final (c,&mdContext);
+  SHA256_Final (c,&shaContext);
 
-  for(i = 0; i < MD5_DIGEST_LENGTH; i++) {
-    sprintf(&filemd5[i*2], "%02x", (unsigned int)c[i]);
+  for(i = 0; i < SHA256_DIGEST_LENGTH; i++) {
+    sprintf(&filesha256[i*2], "%02x", (unsigned int)c[i]);
   }
   fclose (inFile);
-  return (strcmp(filemd5, md5sum) == 0);
+  return (strcmp(filesha256, sha256sum) == 0);
 }
 
 gboolean
-download_archive (const gchar *archive, const gchar *archive_md5sum,
+download_archive (const gchar *archive, const gchar *archive_sha256sum,
 		  gchar **location, GError **error)
 {
   const gchar *cachedir = "/var/cache/tiu";
@@ -73,10 +73,10 @@ download_archive (const gchar *archive, const gchar *archive_md5sum,
       *location = g_build_filename(cachedir, tiu_basename, NULL);
       free (tiu_basename);
 
-      if (archive_md5sum)
+      if (archive_sha256sum)
 	{
 	  /*Checking if file has already been downloaded */
-	  if (check_md5sum(*location, archive_md5sum))
+	  if (check_sha256sum(*location, archive_sha256sum))
           {
             g_printf("swu archive '%s' has already been downloaded...\n",
 		     archive);
