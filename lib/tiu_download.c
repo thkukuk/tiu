@@ -1,7 +1,7 @@
 
 #include <glib/gprintf.h>
 #include <glib/gstdio.h>
-#include <openssl/sha.h>
+#include <openssl/evp.h>
 
 #include "tiu.h"
 #include "tiu-internal.h"
@@ -13,9 +13,10 @@
 static gboolean
 check_sha256sum(const gchar *filename, const gchar *sha256sum)
 {
-  unsigned char c[SHA256_DIGEST_LENGTH];
-  int i;
-  SHA256_CTX shaContext;
+  EVP_MD_CTX *mdctx;
+  const EVP_MD *md;
+  unsigned char md_value[EVP_MAX_MD_SIZE];
+  unsigned int md_len, i;
   int bytes;
   unsigned char data[1024];
   char *filesha256 = (char*) malloc(33 *sizeof(char));
@@ -24,16 +25,19 @@ check_sha256sum(const gchar *filename, const gchar *sha256sum)
   if (inFile == NULL)
     return FALSE;
 
-  SHA256_Init (&shaContext);
+  md = EVP_get_digestbyname("sha256");
+  mdctx = EVP_MD_CTX_create();
+  EVP_DigestInit_ex (mdctx, md, NULL);
 
-  while ((bytes = fread (data, 1, 1024, inFile)) != 0)
+  while ((bytes = fread (data, 1, 1024, inFile)) != 0) {
+    EVP_DigestUpdate (mdctx, data, bytes);
+  }
 
-  SHA256_Update (&shaContext, data, bytes);
+  EVP_DigestFinal_ex (mdctx, md_value, &md_len);
+  EVP_MD_CTX_destroy(mdctx);
 
-  SHA256_Final (c,&shaContext);
-
-  for(i = 0; i < SHA256_DIGEST_LENGTH; i++) {
-    sprintf(&filesha256[i*2], "%02x", (unsigned int)c[i]);
+  for(i = 0; i < md_len; i++) {
+    sprintf(&filesha256[i*2], "%02x", md_value[i]);
   }
   fclose (inFile);
   return (strcmp(filesha256, sha256sum) == 0);
