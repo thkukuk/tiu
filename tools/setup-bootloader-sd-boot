@@ -34,7 +34,7 @@ mkdir -p "${ROOTDIR}/etc/kernel"
 ENTRY_TOKEN=$(. ${ROOTDIR}/usr/lib/os-release; echo "$ID")
 echo "$ENTRY_TOKEN" > "${ROOTDIR}/etc/kernel/entry-token"
 
-echo "root=PARTLABEL=ROOT rootflags=rw mount.usr=PARTLABEL=USR_A mount.usrflags=ro rw quiet systemd.show_status=1 mitigations=auto" > "${ROOTDIR}/etc/kernel/cmdline"
+echo "root=PARTLABEL=ROOT rootflags=rw mount.usr=PARTLABEL=USR_A mount.usrflags=ro rw systemd.show_status=1 mitigations=auto" > "${ROOTDIR}/etc/kernel/cmdline"
 
 # Install the kernel
 for k in "${ROOTDIR}"/usr/lib/modules/*/vmlinuz; do
